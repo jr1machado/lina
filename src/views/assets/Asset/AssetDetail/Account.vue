@@ -76,8 +76,16 @@ export default {
             type: 'primary',
             label: this.$tc('Test'),
             disabled:
-              ['clickhouse', 'redis', 'website', 'chatgpt'].indexOf(this.object.type.value) !==
-                -1 || this.$store.getters.currentOrgIsRoot
+              [
+                'clickhouse',
+                'redis',
+                'website',
+                'fortinet',
+                'checkpoint',
+                'vmware',
+                'palo_alto',
+                'chatgpt'
+              ].indexOf(this.object.type.value) !== -1 || this.$store.getters.currentOrgIsRoot
           },
           callbacks: Object.freeze({
             click: () => {

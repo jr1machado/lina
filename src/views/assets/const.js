@@ -64,7 +64,10 @@ async function updatePlatformProtocols(
   }
 
   const isCreate = !vm.$route?.params?.id && !vm.$route?.query?.clone_from
-  if (platformType === 'website' && (isCreate || platformChanged)) {
+  if (
+    ['website', 'fortinet', 'checkpoint', 'vmware', 'palo_alto'].includes(platformType) &&
+    (isCreate || platformChanged)
+  ) {
     const setting = Array.isArray(platformProtocols)
       ? platformProtocols[0].setting
       : platformProtocols.setting

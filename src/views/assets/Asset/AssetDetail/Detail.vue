@@ -240,7 +240,10 @@ export default {
       const type = object.type.value
       const autofill = object.spec_info?.autofill
       return (
-        !(type === 'website' && autofill === 'script') &&
+        !(
+          ['website', 'fortinet', 'checkpoint', 'vmware', 'palo_alto'].includes(type) &&
+          autofill === 'script'
+        ) &&
         Object.keys(object.spec_info || {}).length > 0
       )
     }

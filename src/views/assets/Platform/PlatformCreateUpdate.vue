@@ -81,12 +81,6 @@ export default {
         if (obj['category'] && obj['type']) {
           obj['category_type'] = [obj['category'].value, obj['type'].value]
         }
-        obj.protocols = obj.protocols?.map((i) => {
-          if (i.name === 'http') {
-            i.display_name = 'http(s)'
-          }
-          return i
-        })
         return obj
       },
       defaultOptions: {}
@@ -141,14 +135,7 @@ export default {
       const constraints = await this.$axios.get(url)
       this.defaultOptions = constraints
 
-      let protocols = constraints?.protocols || []
-      protocols = protocols?.map((i) => {
-        if (i.name === 'http') {
-          i.display_name = 'http(s)'
-        }
-        return i
-      })
-      this.fieldsMeta.protocols.el.choices = protocols
+      this.fieldsMeta.protocols.el.choices = constraints?.protocols || []
 
       const fieldsCheck = ['gateway_enabled', 'su_enabled']
       for (const field of fieldsCheck) {
