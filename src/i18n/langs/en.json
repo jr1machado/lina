@@ -32,5 +32,10 @@
   "FailedToSendVerificationCode": "Failed to send verification code",
   "Role": "Role",
   "DeeplyThoughtAbout": "Thought deeply",
-  "ChatAIThinking": "Thinking"
+  "ChatAIThinking": "Thinking",
+  "Watermark": "Watermark",
+  "WatermarkAssetOverrideHelpText": "Overrides the global watermark setting for this asset only. Only an Org Admin can change this.",
+  "WatermarkInheritGlobal": "Inherit global setting",
+  "Enabled": "Enabled",
+  "Disabled": "Disabled"
 }

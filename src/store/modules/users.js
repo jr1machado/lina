@@ -26,6 +26,7 @@ const getDefaultState = () => {
     perms: [],
     MFAVerifyAt: null,
     isSuperAdmin: false,
+    isOrgAdmin: false,
     isAdmin: false,
     hasAdminPerm: false,
     hasAuditPerm: false
@@ -46,6 +47,7 @@ const mutations = {
     state.username = profile.username
     state.perms = profile.perms
     state.isSuperAdmin = profile['is_superuser']
+    state.isOrgAdmin = profile['is_org_admin']
     state.consoleOrgs = profile['console_orgs']
     state.pamOrgs = profile['pam_orgs']
     state.workbenchOrgs = profile['workbench_orgs']

@@ -229,6 +229,20 @@ export const assetFieldsMeta = (vm, category, type) => {
     is_active: {
       type: 'checkbox'
     },
+    watermark_enabled: {
+      label: i18n.t('Watermark'),
+      type: 'select',
+      helpText: i18n.t('WatermarkAssetOverrideHelpText'),
+      el: {
+        disabled: !vm.$store.state.users.isOrgAdmin,
+        clearable: true,
+        options: [
+          { label: i18n.t('WatermarkInheritGlobal'), value: null },
+          { label: i18n.t('Enabled'), value: true },
+          { label: i18n.t('Disabled'), value: false }
+        ]
+      }
+    },
     cluster: {
       label: i18n.t('Cluster')
     },
