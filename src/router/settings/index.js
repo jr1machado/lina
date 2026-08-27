@@ -581,6 +581,18 @@ export default {
       ]
     },
     {
+      // S25A: Platform Observability & Health —
+      // INFO/Sprint_25A-Observabilidade.md #94-95, #225.
+      path: '/settings/platform-health',
+      name: 'PlatformHealth',
+      component: () => import('@/views/settings/PlatformHealth/index.vue'),
+      meta: {
+        title: i18n.t('PlatformObservabilityHealth'),
+        icon: 'activity',
+        permissions: ['ops.view_platform_health']
+      }
+    },
+    {
       path: '/settings/jdmc',
       name: 'DeviceManager',
       meta: {

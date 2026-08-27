@@ -37,5 +37,9 @@
   "WatermarkAssetOverrideHelpText": "Overrides the global watermark setting for this asset only. Only an Org Admin can change this.",
   "WatermarkInheritGlobal": "Inherit global setting",
   "Enabled": "Enabled",
-  "Disabled": "Disabled"
+  "Disabled": "Disabled",
+  "PlatformObservabilityHealth": "Platform Observability & Health",
+  "SecondsAgo": "{n}s ago",
+  "DataStale": "Data stale",
+  "NoActiveAlerts": "No active alerts"
 }
