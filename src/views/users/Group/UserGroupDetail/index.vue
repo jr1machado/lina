@@ -10,12 +10,14 @@
 import { GenericDetailPage } from '@/layout/components'
 import GroupInfo from './GroupInfo'
 import GroupUser from './GroupUser'
+import GroupAssignedAuthorizations from './GroupAssignedAuthorizations'
 
 export default {
   components: {
     GenericDetailPage,
     GroupInfo,
-    GroupUser
+    GroupUser,
+    GroupAssignedAuthorizations
   },
   data() {
     return {
@@ -31,6 +33,11 @@ export default {
           {
             title: this.$t('UserList'),
             name: 'GroupUser'
+          },
+          {
+            title: this.$t('Assigned Authorizations'),
+            name: 'GroupAssignedAuthorizations',
+            hidden: () => !this.$hasPerm('perms.view_assetpermission')
           }
         ]
       }

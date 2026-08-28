@@ -8,6 +8,7 @@ import AssetsMenu from './assets'
 import PermsMenu from './perms'
 import AccountMenus from './accounts'
 import LabelMenus from './labels'
+import ReportsCenterMenu from './reports_center'
 
 export default {
   path: '/console',
@@ -28,13 +29,43 @@ export default {
   children: [
     {
       path: '/console/dashboard',
-      component: () => import('@/views/dashboard/Console/index.vue'),
-      name: 'AdminDashboard',
+      component: empty,
+      name: 'Dashboard',
+      redirect: { name: 'AdminDashboard' },
       meta: {
         icon: 'dashboard',
         title: i18n.t('Dashboard'),
         permissions: []
-      }
+      },
+      children: [
+        {
+          path: 'overview',
+          component: () => import('@/views/dashboard/Console/index.vue'),
+          name: 'AdminDashboard',
+          meta: {
+            title: i18n.t('Overview'),
+            permissions: []
+          }
+        },
+        {
+          path: 'identity-risk',
+          component: () => import('@/views/dashboard/IdentityRisk/index.vue'),
+          name: 'IdentityRiskDashboard',
+          meta: {
+            title: i18n.t('Identity Risk'),
+            permissions: ['risk.view_risk_dashboard']
+          }
+        },
+        {
+          path: 'kri',
+          component: () => import('@/views/dashboard/KRI/index.vue'),
+          name: 'KRIDashboard',
+          meta: {
+            title: i18n.t('KRI'),
+            permissions: ['risk.view_kri_dashboard']
+          }
+        }
+      ]
     },
     {
       path: '/console/users',
@@ -65,6 +96,17 @@ export default {
         icon: 'key'
       },
       children: AccountMenus
+    },
+    {
+      path: '/console/reports-center',
+      component: empty,
+      name: 'ReportsCenter',
+      redirect: { name: 'ReportLibrary' },
+      meta: {
+        title: i18n.t('Reports'),
+        icon: 'file'
+      },
+      children: ReportsCenterMenu
     },
     {
       path: '/console/perms',

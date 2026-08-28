@@ -10,12 +10,14 @@
 import { GenericDetailPage } from '@/layout/components'
 import RoleInfo from './RoleInfo'
 import RoleUsers from './RoleUsers'
+import RoleActivity from './RoleActivity'
 
 export default {
   components: {
     GenericDetailPage,
     RoleInfo,
-    RoleUsers
+    RoleUsers,
+    RoleActivity
   },
   data() {
     const vm = this
@@ -54,6 +56,11 @@ export default {
             title: this.$t('RoleUsers'),
             name: 'RoleUsers',
             hidden: () => !this.$hasPerm(`rbac.view_${scope}rolebinding`)
+          },
+          {
+            title: this.$t('Activity'),
+            name: 'RoleActivity',
+            hidden: () => !this.$hasPerm('audits.view_operatelog')
           }
         ]
       }

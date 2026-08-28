@@ -3,13 +3,25 @@
     <AutoDetailCard :fields="detailFields" :object="object" :url="url" />
     <template #right>
       <IBox :title="$tc('Permissions')">
-        <div style="height: 10%">
+        <el-alert
+          v-if="object.builtin"
+          :closable="false"
+          :title="$t('ProtectedRoleTitle')"
+          class="protected-role-alert"
+          type="info"
+        >
+          <div>{{ $t('ProtectedRoleDesc') }}</div>
+          <el-button size="small" style="margin-top: 8px" type="primary" @click="cloneAsManaged">
+            {{ $t('CloneAsManagedRole') }}
+          </el-button>
+        </el-alert>
+        <div v-else style="height: 10%">
           <el-button
             :disabled="isDisabled"
             size="small"
             style="float: right; width: 100%"
             type="primary"
-            @click="updatePermissions"
+            @click="previewAndUpdatePermissions"
           >
             {{ $t('Update') }}
           </el-button>
@@ -25,6 +37,7 @@
 </template>
 
 <script>
+import { ElMessageBox } from 'element-plus'
 import { IBox } from '@/components'
 import AutoDetailCard from '@/components/Cards/DetailCard/auto'
 import AutoDataZTree from '@/components/Tree/AutoDataZTree'
@@ -343,14 +356,55 @@ export default {
         this.ztree.checkNode(depNode, true)
       }
     },
-    updatePermissions() {
+    getCheckedPermIds() {
       const ztree = this.$refs.tree.zTree
       const checkedNodes = ztree.getCheckedNodes()
-      const permNodes = checkedNodes.filter((node) => !node.isParent)
-      const permIds = permNodes.map((node) => node.id)
+      return checkedNodes.filter((node) => !node.isParent).map((node) => node.id)
+    },
+    previewAndUpdatePermissions() {
+      // S08A §22-25 - preview the diff before committing; the backend
+      // recomputes added/removed for real (it does not trust this preview
+      // when the PATCH actually lands, §24).
+      const permIds = this.getCheckedPermIds()
+      const diffUrl = `/api/v1/rbac/${this.object.scope.value}-roles/${this.object.id}/permissions/diff/`
+      this.$axios
+        .post(diffUrl, { permissions: permIds })
+        .then(({ added, removed, users_impacted: usersImpacted }) => {
+          if (!added.length && !removed.length) {
+            this.$message.info(this.$t('NoPermissionChanges'))
+            return
+          }
+          this.confirmAndCommit(added, removed, usersImpacted, permIds)
+        })
+        .catch((error) => {
+          this.$message.error(this.$tc('UpdateErrorMsg') + error)
+          this.$log.error(error)
+        })
+    },
+    confirmAndCommit(added, removed, usersImpacted, permIds) {
+      const lines = []
+      if (added.length) {
+        lines.push(`<strong>${this.$t('Add')}</strong>`)
+        lines.push(...added.map((p) => `+ ${p.name}`))
+      }
+      if (removed.length) {
+        lines.push(`<strong>${this.$t('Remove')}</strong>`)
+        lines.push(...removed.map((p) => `- ${p.name}`))
+      }
+      lines.push(`<br/>${this.$t('UsersImpacted')}: ${usersImpacted}`)
+      ElMessageBox.confirm(lines.join('<br/>'), this.$t('ConfirmPermissionChanges'), {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: this.$t('Confirm'),
+        cancelButtonText: this.$t('Cancel'),
+        type: 'warning'
+      })
+        .then(() => this.updatePermissions(permIds))
+        .catch(() => {})
+    },
+    updatePermissions(permIds) {
       const roleDetailUrl = `/api/v1/rbac/${this.object.scope.value}-roles/${this.object.id}/`
       const data = {
-        permissions: permIds
+        permissions: permIds || this.getCheckedPermIds()
       }
       this.$axios
         .patch(roleDetailUrl, data)
@@ -361,12 +415,50 @@ export default {
           this.$message.error(this.$tc('UpdateErrorMsg') + error)
           this.$log.error(error)
         })
+    },
+    cloneAsManaged() {
+      // S08A §5, §28-29 - the native clone-on-create primitive
+      // (`?clone_from=<id>` on POST, apps/rbac/api/role.py
+      // `set_permissions_if_need`) copies permissions+scope only, never
+      // users/bindings/activity/the builtin flag - called directly here
+      // rather than through the list's drawer-clone flow, which pre-fills
+      // form fields client-side and isn't reachable from this page.
+      ElMessageBox.prompt(this.$t('CloneRoleNamePrompt'), this.$t('CloneAsManagedRole'), {
+        confirmButtonText: this.$t('Confirm'),
+        cancelButtonText: this.$t('Cancel'),
+        inputValue: `${this.object.display_name} (${this.$t('Managed')})`
+      })
+        .then(({ value: name }) => {
+          const scope = this.object.scope.value
+          return this.$axios.post(`/api/v1/rbac/${scope}-roles/?clone_from=${this.object.id}`, {
+            name,
+            scope,
+            comment: this.object.comment
+          })
+        })
+        .then((role) => {
+          this.$message.success(this.$tc('CreateSuccessMsg'))
+          this.$router.push({
+            name: 'RoleDetail',
+            params: { id: role.id },
+            query: { scope: role.scope.value }
+          })
+        })
+        .catch((error) => {
+          if (error === 'cancel') return
+          this.$message.error(this.$tc('CreateErrorMsg') + error)
+          this.$log.error(error)
+        })
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
+.protected-role-alert {
+  margin-bottom: 12px;
+}
+
 .perm-tree {
   :deep(.ztree) {
     background: white !important;

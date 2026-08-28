@@ -20,6 +20,7 @@ import UserGrantedAssets from './UserGrantedAssets'
 import UserInfo from './UserInfo'
 import UserLoginACL from './UserLoginACL.vue'
 import UserSession from './UserSession.vue'
+import UserEffectivePermissions from './UserEffectivePermissions.vue'
 
 export default {
   components: {
@@ -33,7 +34,8 @@ export default {
     AssetPermissionDetail,
     AssetPermissionAccount,
     UserAssetPermissionRules,
-    UserAuthUKey
+    UserAuthUKey,
+    UserEffectivePermissions
   },
   data() {
     const vm = this
@@ -79,13 +81,21 @@ export default {
             title: this.$t('UserSession'),
             name: 'UserSession',
             hidden: () => !vm.$hasPerm('terminal.view_session')
+          },
+          {
+            title: this.$t('EffectivePermissions'),
+            name: 'UserEffectivePermissions',
+            // S08A §52-53 - an optional API 403 shouldn't surface as a
+            // confusing error; hide the tab instead when it wouldn't work.
+            hidden: () =>
+              vm.user.id !== vm.currentUser?.id && !vm.$hasPerm('rbac.view_systemrolebinding')
           }
         ]
       }
     }
   },
   computed: {
-    ...mapGetters(['currentUserIsSuperAdmin', 'publicSettings'])
+    ...mapGetters(['currentUserIsSuperAdmin', 'publicSettings', 'currentUser'])
   },
   methods: {
     handleTabClick(tab) {

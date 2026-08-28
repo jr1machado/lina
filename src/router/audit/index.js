@@ -88,10 +88,14 @@ export default {
       redirect: '',
       name: 'AuditsReports',
       meta: {
+        // Not an xpack feature: not in rbac/tree.py's xpack_nodes, no
+        // backend XPACK_ENABLED gate in the reports app, and the builtin
+        // Auditor role (rbac/builtin.py) is granted these report
+        // permissions unconditionally as core CE functionality -
+        // licenseRequired:true hid a working, permitted screen.
         title: i18n.t('Report'),
         icon: 'report',
-        permissions: [],
-        licenseRequired: true
+        permissions: []
       },
       children: ReportsRoutes
     }

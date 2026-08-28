@@ -114,10 +114,13 @@ export default {
       component: globalSubmenu,
       redirect: '',
       meta: {
+        // RBAC/roles is a core feature of this CE-only fork, not an
+        // xpack-licensed one - licenseRequired:true hid this route
+        // entirely, since hasValidLicense is permanently false without
+        // xpack (see store/modules/settings.js).
         permissions: ['rbac.view_orgrole | rbac.view_systemrole'],
         app: 'rbac',
         disableOrgsChange: true,
-        licenseRequired: true,
         icon: 'role'
       },
       children: [
@@ -126,7 +129,9 @@ export default {
           component: () => import('@/views/users/Role/RoleList/index'),
           name: 'RoleList',
           meta: {
-            title: i18n.t('RoleList'),
+            // S08A §10, §12 - "Administração > RBAC", not "Roles" - same
+            // route/component, no duplicate screen.
+            title: i18n.t('RBAC'),
             app: 'rbac',
             permissions: ['rbac.view_orgrole | rbac.view_systemrole']
           }

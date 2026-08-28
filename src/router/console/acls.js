@@ -14,6 +14,10 @@ export default [
       icon: 'acl',
       permissions: []
     },
+    // licenseRequired removed from every child below: no XPACK_ENABLED
+    // gate in the acls backend app, not in rbac/tree.py's xpack_nodes
+    // list, and hasValidLicense is permanently false in this CE-only
+    // fork - same broken-route pattern as RBAC/audit reports.
     children: [
       {
         path: 'login-acls',
@@ -25,8 +29,7 @@ export default [
           title: i18n.t('UserLoginACLs'),
           app: 'acls',
           resource: 'loginacl',
-          disableOrgsChange: true,
-          licenseRequired: true
+          disableOrgsChange: true
         },
         children: [
           {
@@ -134,7 +137,6 @@ export default [
         name: 'LoginAssetACLs',
         meta: {
           title: i18n.t('BaseAssetACLs'),
-          licenseRequired: true,
           app: 'acls',
           resource: 'loginassetacl'
         },
@@ -181,7 +183,6 @@ export default [
         name: 'DataMaskingRules',
         meta: {
           title: i18n.t('DataMasking'),
-          licenseRequired: true,
           app: 'acls',
           resource: 'datamaskingrule'
         },
@@ -288,7 +289,6 @@ export default [
         name: 'ConnectMethodACL',
         meta: {
           title: i18n.t('ConnectMethodList'),
-          licenseRequired: true,
           app: 'acls',
           disableOrgsChange: true,
           resource: 'connectmethodacl'
