@@ -162,9 +162,16 @@ export default {
     async onShow() {
       await this.getAccountSecret()
       this.isShow = !this.isShow
-      setTimeout(() => {
+      // Sprint_33-Vault-Protection.md §25/36 - configurable reveal TTL
+      // (backend default 15s, SECURITY_SECRET_REVEAL_TTL_SECONDS,
+      // returned alongside the secret itself so this can never drift
+      // from what an admin configured). Falls back to the pre-existing
+      // hardcoded 10s when no TTL was provided (secret came from an
+      // endpoint that doesn't send one yet).
+      clearTimeout(this._revealTtlTimer)
+      this._revealTtlTimer = setTimeout(() => {
         this.isShow = false
-      }, 10000)
+      }, (this.formatterArgs.revealTtlSeconds || 10) * 1000)
     },
     async onCopy() {
       await this.getAccountSecret()

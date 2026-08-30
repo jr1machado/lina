@@ -68,7 +68,10 @@ const KRI_DISPLAY = {
   DORMANT_ENABLED_USERS: { label: 'Dormant Enabled Users', purpose: 'Share of enabled users inactive beyond the configured threshold.', unit: 'percent', higherIsBetter: false },
   PRIVILEGED_ACCOUNT_COVERAGE: { label: 'Privileged Account Coverage', purpose: 'Managed privileged accounts over known privileged accounts. Shown only when a reliable denominator exists.', unit: 'percent', higherIsBetter: true },
   ORPHAN_PRIVILEGED_ACCOUNTS: { label: 'Orphan Privileged Accounts', purpose: 'Privileged accounts with no assigned owner.', unit: 'count', higherIsBetter: false },
-  EXPIRED_ACCESS_GRANTS: { label: 'Expired Access Grants', purpose: 'Access grants past their expiration still effectively active.', unit: 'count', higherIsBetter: false }
+  EXPIRED_ACCESS_GRANTS: { label: 'Expired Access Grants', purpose: 'Access grants past their expiration still effectively active.', unit: 'count', higherIsBetter: false },
+  MFA_COVERAGE_OPERATORS: { label: 'MFA Coverage - Operators', purpose: 'Share of eligible Operators enrolled in MFA.', unit: 'percent', higherIsBetter: true },
+  MFA_COVERAGE_ADMINS: { label: 'MFA Coverage - Administrators', purpose: 'Share of eligible Administrators enrolled in MFA.', unit: 'percent', higherIsBetter: true },
+  PRIVILEGED_ROTATION_NONCOMPLIANCE: { label: 'Privileged Rotation Non-Compliance', purpose: 'Privileged accounts out of their defined rotation policy.', unit: 'percent', higherIsBetter: false }
 }
 
 export default {

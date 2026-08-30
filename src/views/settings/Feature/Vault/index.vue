@@ -5,6 +5,7 @@
         <div v-sanitize="helpText" />
       </template>
     </el-alert>
+    <VaultSecurityStatus v-if="publicSettings['VAULT_ENABLED']" />
     <IBox>
       <GenericCreateUpdateForm v-bind="$data" />
     </IBox>
@@ -12,6 +13,7 @@
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
 import { GenericCreateUpdateForm } from '@/layout/components'
 import IBox from '@/components/Common/IBox/index.vue'
 import { openTaskPage } from '@/utils/jms/index'
@@ -19,11 +21,18 @@ import store from '@/store'
 import HashiCorpKV from './HCP.vue'
 import AzureKV from './Azure.vue'
 import AwsSM from './Aws.vue'
+import VaultSecurityStatus from './SecurityStatus.vue'
 
 export default {
   components: {
     IBox,
-    GenericCreateUpdateForm
+    GenericCreateUpdateForm,
+    VaultSecurityStatus
+  },
+  computed: {
+    ...mapGetters({
+      publicSettings: 'publicSettings'
+    })
   },
   data() {
     const vm = this

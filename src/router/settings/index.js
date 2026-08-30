@@ -598,6 +598,19 @@ export default {
       }
     },
     {
+      // In-app Help center: usage docs/best practices/config guidance per
+      // module, bilingual (PT-BR/EN). No permission gate - any
+      // authenticated user/operator can read it, same as the rest of
+      // /settings requires login but not a specific RBAC permission here.
+      path: '/settings/help',
+      name: 'HelpCenter',
+      component: () => import('@/views/settings/Help/index.vue'),
+      meta: {
+        title: i18n.t('HelpCenter'),
+        icon: 'help'
+      }
+    },
+    {
       path: '/settings/jdmc',
       name: 'DeviceManager',
       meta: {

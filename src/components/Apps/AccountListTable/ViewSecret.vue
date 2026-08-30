@@ -22,7 +22,9 @@
             :col="{
               formatterArgs: {
                 name: account['name'],
-                secretType: secretType || ''
+                secretType: secretType || '',
+                hasCopy: secretInfo.can_copy !== false,
+                revealTtlSeconds: secretInfo.reveal_ttl_seconds
               }
             }"
             @input="onShowKeyCopyFormatterChange"
