@@ -10,7 +10,12 @@
               {{ $t('Data unavailable') }}
             </div>
             <template v-else>
-              <div class="kri-value" :class="statusClass(kri.status)">{{ formatValue(kri) }}</div>
+              <KRIGauge
+                v-if="kriUnit(kri.kri_type) === 'percent'"
+                :value="kri.current_value"
+                :status="kri.status"
+              />
+              <div v-else class="kri-value" :class="statusClass(kri.status)">{{ formatValue(kri) }}</div>
               <div class="kri-target">{{ $t('Target') }} {{ formatTarget(kri) }}</div>
               <div class="kri-previous">
                 {{ $t('Previous Period') }}: {{ formatPrevious(kri) }}
@@ -41,6 +46,14 @@
         <div><b>{{ $t('Purpose') }}:</b> {{ $t(kriPurpose(detailsKri?.kri_type)) }}</div>
         <div><b>{{ $t('Period') }}:</b> {{ detailsKri?.period?.start }} - {{ detailsKri?.period?.end }}</div>
       </div>
+      <LineChart
+        v-if="history.length > 1"
+        v-loading="loadingHistory"
+        :primary-name="detailsTitle"
+        :primary-data="trendValues"
+        :dates-metrics="trendDates"
+        class="details-trend"
+      />
       <el-table v-loading="loadingHistory" :data="history" size="small" max-height="360">
         <el-table-column prop="snapshot_date" :label="$t('Date')" width="140" />
         <el-table-column prop="numerator" :label="$t('Numerator')" width="120" />
@@ -55,6 +68,8 @@
 import { Page } from '@/layout/components'
 import Page403 from '@/views/403'
 import { IBox } from '@/components'
+import KRIGauge from '@/components/Dashboard/KRIGauge.vue'
+import LineChart from '@/components/Dashboard/LineChart.vue'
 import { getKriHistory, getKriSummary } from '@/api/risk'
 
 // Mirrors risk/const.py KRIType / KRI_HIGHER_IS_BETTER - a tiny, stable
@@ -71,12 +86,15 @@ const KRI_DISPLAY = {
   EXPIRED_ACCESS_GRANTS: { label: 'Expired Access Grants', purpose: 'Access grants past their expiration still effectively active.', unit: 'count', higherIsBetter: false },
   MFA_COVERAGE_OPERATORS: { label: 'MFA Coverage - Operators', purpose: 'Share of eligible Operators enrolled in MFA.', unit: 'percent', higherIsBetter: true },
   MFA_COVERAGE_ADMINS: { label: 'MFA Coverage - Administrators', purpose: 'Share of eligible Administrators enrolled in MFA.', unit: 'percent', higherIsBetter: true },
-  PRIVILEGED_ROTATION_NONCOMPLIANCE: { label: 'Privileged Rotation Non-Compliance', purpose: 'Privileged accounts out of their defined rotation policy.', unit: 'percent', higherIsBetter: false }
+  PRIVILEGED_ROTATION_NONCOMPLIANCE: { label: 'Privileged Rotation Non-Compliance', purpose: 'Privileged accounts out of their defined rotation policy.', unit: 'percent', higherIsBetter: false },
+  RECOVERY_COVERAGE: { label: 'Recovery Coverage', purpose: 'Eligible privileged accounts whose Device has a healthy Recovery/Reconciliation account.', unit: 'percent', higherIsBetter: true },
+  RECONCILIATION_FAILURE_RATE: { label: 'Reconciliation Failure Rate', purpose: 'Share of credential-drift reconciliation attempts that failed in the period.', unit: 'percent', higherIsBetter: false },
+  CREDENTIAL_DRIFT_RATE: { label: 'Credential Drift Rate', purpose: 'Share of eligible managed credentials currently out of sync with their target (drift detected).', unit: 'percent', higherIsBetter: false }
 }
 
 export default {
   name: 'KRIDashboard',
-  components: { Page, Page403, IBox },
+  components: { Page, Page403, IBox, KRIGauge, LineChart },
   data() {
     return {
       loading: false,
@@ -90,6 +108,17 @@ export default {
   computed: {
     detailsTitle() {
       return this.detailsKri ? this.$t(this.kriLabel(this.detailsKri.kri_type)) : ''
+    },
+    // history comes back newest-first (KRIHistoryApi orders by
+    // -snapshot_date); a trend line reads left-to-right in time order.
+    orderedHistory() {
+      return [...this.history].reverse()
+    },
+    trendDates() {
+      return this.orderedHistory.map((h) => h.snapshot_date)
+    },
+    trendValues() {
+      return this.orderedHistory.map((h) => h.value)
     }
   },
   mounted() {
@@ -216,5 +245,8 @@ export default {
   color: var(--color-text-secondary, #909399);
   margin-bottom: 12px;
   line-height: 1.8;
+}
+.details-trend {
+  margin-bottom: 12px;
 }
 </style>

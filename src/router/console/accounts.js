@@ -37,6 +37,33 @@ export default [
     ]
   },
   {
+    path: 'recovery-accounts',
+    component: empty,
+    name: 'RecoveryAccount',
+    meta: {
+      title: i18n.t('RecoveryAccount'),
+      app: 'accounts',
+      icon: 'accounts',
+      permissions: ['accounts.manage_managed_account']
+    },
+    redirect: {
+      name: 'RecoveryAccountBulkProvision'
+    },
+    children: [
+      {
+        path: '',
+        name: 'RecoveryAccountBulkProvision',
+        component: () => import('@/views/accounts/RecoveryAccounts/BulkProvision.vue'),
+        meta: {
+          title: i18n.t('BulkProvisionRecoveryAccounts'),
+          showInSearch: true,
+          app: 'accounts',
+          permissions: ['accounts.manage_managed_account']
+        }
+      }
+    ]
+  },
+  {
     path: 'virtual-accounts',
     component: empty,
     meta: {
