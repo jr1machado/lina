@@ -59,6 +59,7 @@ import {
 } from './const'
 import { openTaskPage } from '@/utils/jms/index'
 import {
+  AccountCategoryFormatter,
   AccountConnectFormatter,
   ActionsFormatter,
   PlatformFormatter,
@@ -175,7 +176,7 @@ export default {
         },
         extraQuery: this.extraQuery,
         columnsExclude: ['spec_info'],
-        columnsAdd: ['secret', 'platform', 'connect'],
+        columnsAdd: ['secret', 'platform', 'connect', 'category'],
         columnsShow: {
           min: ['name', 'username', 'actions'],
           default: this.columnsDefault
@@ -280,6 +281,11 @@ export default {
             }
           },
           connectivity: connectivityMeta,
+          category: {
+            label: this.$t('Category'),
+            minWidth: '160px',
+            formatter: AccountCategoryFormatter
+          },
           actions: {
             formatter: ActionsFormatter,
             has: this.showActions,

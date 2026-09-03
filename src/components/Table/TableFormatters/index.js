@@ -22,6 +22,7 @@ import AccountInfoFormatter from './AccountInfoFormatter.vue'
 import PlatformFormatter from './PlatformFormatter.vue'
 import DiscoverConfirmFormatter from './DiscoverConfirmFormatter.vue'
 import AccountConnectFormatter from './AccountConnectFormatter.vue'
+import AccountCategoryFormatter from './AccountCategoryFormatter.vue'
 
 export default {
   DetailFormatter,
@@ -47,7 +48,8 @@ export default {
   AccountInfoFormatter,
   CopyableFormatter,
   DiscoverConfirmFormatter,
-  AccountConnectFormatter
+  AccountConnectFormatter,
+  AccountCategoryFormatter
 }
 
 export {
@@ -74,5 +76,6 @@ export {
   PlatformFormatter,
   DiscoverConfirmFormatter,
   AccountInfoFormatter,
-  AccountConnectFormatter
+  AccountConnectFormatter,
+  AccountCategoryFormatter
 }

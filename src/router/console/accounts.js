@@ -147,5 +147,62 @@ export default [
         hidden: true
       }
     ]
+  },
+  {
+    path: 'rotation-policies',
+    component: empty,
+    redirect: {
+      name: 'RotationPolicyList'
+    },
+    meta: {
+      title: i18n.t('RotationPolicy'),
+      app: 'accounts',
+      icon: 'template',
+      permissions: ['accounts.view_rotationpolicy']
+    },
+    children: [
+      {
+        path: '',
+        name: 'RotationPolicyList',
+        component: () => import('@/views/accounts/RotationPolicy/RotationPolicyList.vue'),
+        meta: {
+          menuTitle: i18n.t('RotationPolicy'),
+          title: i18n.t('RotationPolicy'),
+          permissions: ['accounts.view_rotationpolicy']
+        }
+      },
+      {
+        path: 'create',
+        component: () => import('@/views/accounts/RotationPolicy/RotationPolicyCreateUpdate.vue'),
+        name: 'RotationPolicyCreate',
+        meta: {
+          title: i18n.t('CreateRotationPolicy'),
+          action: 'create'
+        },
+        hidden: true
+      },
+      {
+        path: ':id/update',
+        component: () => import('@/views/accounts/RotationPolicy/RotationPolicyCreateUpdate.vue'),
+        name: 'RotationPolicyUpdate',
+        meta: {
+          title: i18n.t('UpdateRotationPolicy'),
+          action: 'update'
+        },
+        hidden: true
+      }
+    ]
+  },
+  {
+    path: 'rotation-exceptions',
+    component: () => import('@/views/accounts/RotationException/RotationExceptionList.vue'),
+    name: 'RotationExceptionList',
+    meta: {
+      title: i18n.t('RotationExceptions'),
+      menuTitle: i18n.t('RotationExceptions'),
+      app: 'accounts',
+      icon: 'template',
+      permissions: ['accounts.view_rotationexception']
+    }
   }
 ]

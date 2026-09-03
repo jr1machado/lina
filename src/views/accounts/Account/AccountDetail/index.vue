@@ -22,6 +22,7 @@
 
 <script>
 import Detail from './Detail.vue'
+import Rotation from './Rotation.vue'
 import { GenericDetailPage, TabPage } from '@/layout/components'
 import AccountCreateUpdate from '@/components/Apps/AccountListTable/AccountCreateUpdate.vue'
 
@@ -29,6 +30,7 @@ export default {
   components: {
     TabPage,
     Detail,
+    Rotation,
     GenericDetailPage,
     AccountCreateUpdate
   },
@@ -43,6 +45,10 @@ export default {
           {
             title: this.$t('Basic'),
             name: 'Detail'
+          },
+          {
+            title: this.$t('Rotation'),
+            name: 'Rotation'
           }
         ],
         actions: {

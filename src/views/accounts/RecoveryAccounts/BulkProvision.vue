@@ -39,6 +39,14 @@
                 {{ $t('Finish') }}
               </el-button>
             </template>
+            <template v-else-if="row.account_id">
+              <el-button size="small" :loading="row.testing" @click="testRow(row)">
+                {{ $t('TestRecovery') }}
+              </el-button>
+              <span v-if="row.testResult" :class="row.testResult.ready ? 'test-ok' : 'test-fail'">
+                {{ row.testResult.ready ? $t('RecoveryTestPassed') : row.testResult.error_code }}
+              </span>
+            </template>
             <span v-else class="provision-error">{{ row.error }}</span>
           </template>
         </el-table-column>
@@ -50,7 +58,12 @@
 <script>
 import { AssetSelect, IBox } from '@/components'
 import { Page } from '@/layout/components'
-import { createLinuxRotationExecutorBinding, provisionRecoveryAccounts } from '@/api/accounts'
+import {
+  createLinuxRotationExecutorBinding,
+  provisionRecoveryAccounts,
+  testLinuxRotationReadiness,
+  testWindowsRotationReadiness
+} from '@/api/accounts'
 
 // Sprint_34-Credential-Recovery-Contas-Reconciliacao.md §12/15-17/74-75/90 -
 // dedicated Bulk Provision screen over the API/CRUD that already existed
@@ -83,11 +96,33 @@ export default {
     async submit() {
       this.submitting = true
       try {
-        const assetIds = this.selectedAssets.map((a) => a.id)
+        const assetIds = this.selectedAssets
         const data = await provisionRecoveryAccounts({ asset_ids: assetIds })
-        this.results = data.map((row) => ({ ...row, fingerprint: '', finishing: false }))
+        this.results = data.map((row) => ({ ...row, fingerprint: '', finishing: false, testing: false, testResult: null }))
       } finally {
         this.submitting = false
+      }
+    },
+    async testRow(row) {
+      row.testing = true
+      row.testResult = null
+      try {
+        // The readiness check tests "can the recovery account reset THIS
+        // account's password" for a managed (non-service) account - it
+        // rejects service accounts outright, so it can't be called with
+        // the just-created recovery account's own id. Find an eligible
+        // managed account on the same asset to test against instead.
+        const accountsResp = await this.$axios.get(`/api/v1/accounts/accounts/?asset_id=${row.asset_id}`)
+        const accounts = accountsResp.results || accountsResp
+        const target = accounts.find((a) => !a.service_account && a.is_active)
+        if (!target) {
+          this.$message.warning(this.$t('RecoveryTestNoManagedAccount'))
+          return
+        }
+        const test = row.is_linux ? testLinuxRotationReadiness : testWindowsRotationReadiness
+        row.testResult = await test(target.id)
+      } finally {
+        row.testing = false
       }
     },
     async finishLinuxBinding(row) {
@@ -138,5 +173,15 @@ export default {
 .provision-error {
   font-size: 12px;
   color: var(--color-text-secondary, #909399);
+}
+.test-ok {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--el-color-success, #67c23a);
+}
+.test-fail {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--el-color-danger, #f56c6c);
 }
 </style>

@@ -80,7 +80,24 @@ export default {
             'secret_reset'
           ]
         ],
-        [this.$t('Other'), ['push_now', 'params', 'on_invalid', 'is_active', 'comment']]
+        [this.$t('Other'), ['push_now', 'params', 'on_invalid', 'is_active', 'comment']],
+        [
+          this.$t('Governance'),
+          [
+            'service_account',
+            'reconciliation_account',
+            'auto_reconcile',
+            'break_glass',
+            'is_shared',
+            'exclusive_use',
+            'dedicated_pam_account',
+            'credential_check_enabled',
+            'rotation_interval',
+            'identity_source',
+            'password_owner',
+            'profile_code'
+          ]
+        ]
       ],
       fieldsMeta: accountFieldsMeta(this),
       hasSaveContinue: false

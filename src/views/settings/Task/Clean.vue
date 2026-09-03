@@ -33,6 +33,15 @@ export default {
           ]
         ],
         [
+          this.$t('RetentionByCriticality'),
+          [
+            'REPLAY_KEEP_DAYS_CRITICAL',
+            'REPLAY_KEEP_DAYS_NONCRITICAL',
+            'COMMAND_KEEP_DAYS_CRITICAL',
+            'COMMAND_KEEP_DAYS_NONCRITICAL'
+          ]
+        ],
+        [
           this.$t('Database'),
           [
             'JOB_EXECUTION_KEEP_DAYS',

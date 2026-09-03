@@ -19,6 +19,7 @@ import Account from './Account.vue'
 import PermUserList from './PermUser.vue'
 import AssetSession from './AssetSession.vue'
 import AssetCommand from './AssetCommand.vue'
+import Recovery from './Recovery.vue'
 
 export default {
   name: 'AssetListDetail',
@@ -29,7 +30,8 @@ export default {
     Account,
     PermUserList,
     AssetSession,
-    AssetCommand
+    AssetCommand,
+    Recovery
   },
   data() {
     return {
@@ -61,6 +63,13 @@ export default {
             title: this.$t('Commands'),
             name: 'AssetCommand',
             hidden: () => !this.$hasPerm('terminal.view_command')
+          },
+          {
+            title: this.$t('CredentialRecovery'),
+            name: 'Recovery',
+            hidden: () =>
+              !this.$hasPerm('accounts.view_account') ||
+              (this.asset.category?.value || this.asset.category) !== 'host'
           }
         ],
         hasRightSide: true,

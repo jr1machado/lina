@@ -20,3 +20,103 @@ export function createLinuxRotationExecutorBinding(data) {
     data
   })
 }
+
+// S18A - rotation job history for one account (or asset), same list the
+// backend already tracked with no Lina consumer until now.
+export function getRotationJobs(params) {
+  return request({
+    url: '/api/v1/accounts/rotation-jobs/',
+    method: 'get',
+    params
+  })
+}
+
+// S18A §65-70 - "Rotate Now": reuses the emergency-rotation execute
+// endpoint scoped to exactly this one account, same as a real incident
+// batch would use, just with account_ids=[id]. No separate single-account
+// rotate endpoint exists (or is needed) - avoids a second code path.
+export function rotateAccountNow(accountId) {
+  return request({
+    url: '/api/v1/accounts/rotation-jobs/emergency/execute/',
+    method: 'post',
+    data: { account_ids: [accountId], incident_ref: 'MANUAL_UI' }
+  })
+}
+
+// Sprint_34-Credential-Recovery-Contas-Reconciliacao.md §42-43 -
+// "Reconcile Now": manual drift recovery, never exposes a secret.
+export function reconcileAccountNow(accountId) {
+  return request({
+    url: `/api/v1/accounts/accounts/${accountId}/reconcile/`,
+    method: 'post'
+  })
+}
+
+// Sprint_34-Credential-Recovery-Contas-Reconciliacao.md §48 - "Test
+// Recovery": S20/S21 readiness checks already existed backend-side with no
+// Lina consumer - never touches the password, just proves the recovery
+// path (SSH/WinRM auth, sudo/privilege, target account) actually works.
+export function testLinuxRotationReadiness(accountId) {
+  return request({
+    url: `/api/v1/accounts/accounts/${accountId}/rotation-readiness/`,
+    method: 'post'
+  })
+}
+
+export function testWindowsRotationReadiness(accountId) {
+  return request({
+    url: `/api/v1/accounts/accounts/${accountId}/windows-rotation-readiness/`,
+    method: 'post'
+  })
+}
+
+// Sprint_35-Rotation-Policy-Editor.md §19-25, §78 - platform template
+// catalog, read-only except for Clone.
+export function listRotationPolicyTemplates() {
+  return request({
+    url: '/api/v1/accounts/rotation-policy-templates/',
+    method: 'get'
+  })
+}
+
+export function cloneRotationPolicyTemplate(templateId, name) {
+  return request({
+    url: `/api/v1/accounts/rotation-policy-templates/${templateId}/clone/`,
+    method: 'post',
+    data: { name }
+  })
+}
+
+// Sprint_35 §28-30, §63-68 - Bulk Assignment with a mandatory Impact
+// Preview step before applying.
+export function previewRotationPolicyAssignment(policyId, scope) {
+  return request({
+    url: `/api/v1/accounts/rotation-policies/${policyId}/assignment-preview/`,
+    method: 'post',
+    data: scope
+  })
+}
+
+export function assignRotationPolicy(policyId, scope) {
+  return request({
+    url: `/api/v1/accounts/rotation-policies/${policyId}/assign/`,
+    method: 'post',
+    data: scope
+  })
+}
+
+// Sprint_35 §30-35 - temporary, justified rotation suspension.
+export function createRotationException(data) {
+  return request({
+    url: '/api/v1/accounts/rotation-exceptions/',
+    method: 'post',
+    data
+  })
+}
+
+export function revokeRotationException(exceptionId) {
+  return request({
+    url: `/api/v1/accounts/rotation-exceptions/${exceptionId}/revoke/`,
+    method: 'post'
+  })
+}

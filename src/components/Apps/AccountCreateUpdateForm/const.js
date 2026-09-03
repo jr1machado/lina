@@ -285,6 +285,125 @@ export const accountFieldsMeta = (vm) => {
           return vm.isDisabled
         }
       }
+    },
+    // S34 - account category flags. This form is the single place to set
+    // them; Rotation.vue/Recovery.vue/KRI dashboard only ever read them
+    // back from the same Account fields.
+    service_account: {
+      label: vm.$t('ServiceAccount'),
+      helpTip: vm.$t('ServiceAccountHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    reconciliation_account: {
+      label: vm.$t('ReconciliationAccount'),
+      helpTip: vm.$t('ReconciliationAccountHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    auto_reconcile: {
+      label: vm.$t('RecoveryAutoReconcile'),
+      hidden: (formValue) => vm.addTemplate || !formValue.reconciliation_account,
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      }
+    },
+    break_glass: {
+      label: vm.$t('BreakGlass'),
+      helpTip: vm.$t('BreakGlassHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    is_shared: {
+      label: vm.$t('Shared'),
+      helpTip: vm.$t('SharedHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    exclusive_use: {
+      label: vm.$t('ExclusiveUse'),
+      helpTip: vm.$t('ExclusiveUseHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    dedicated_pam_account: {
+      label: vm.$t('DedicatedPamAccount'),
+      helpTip: vm.$t('DedicatedPamAccountHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    credential_check_enabled: {
+      label: vm.$t('CredentialCheckEnabled'),
+      helpTip: vm.$t('CredentialCheckEnabledHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    rotation_interval: {
+      label: vm.$t('RotationInterval'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: (formValue) => vm.addTemplate || formValue.service_account
+    },
+    identity_source: {
+      label: vm.$t('IdentitySource'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    password_owner: {
+      label: vm.$t('PasswordOwner'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    profile_code: {
+      label: vm.$t('ProfileCode'),
+      helpTip: vm.$t('ProfileCodeHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
     }
   }
 }

@@ -7,19 +7,16 @@ import BaseFormatter from './base.vue'
 export default {
   name: 'DisplayFormatter',
   extends: BaseFormatter,
-  props: {
-    formatterArgsDefault: {
-      type: Object,
-      default() {
-        return {
-          displayKey: this.col.prop + '_display'
-        }
-      }
-    }
-  },
   data() {
+    // Vue 3: a prop's default() factory is not bound to the instance
+    // (this === null inside it), so `this.col` there threw "Cannot read
+    // properties of null (reading 'col')" for any column relying on the
+    // default displayKey (no explicit formatterArgs.displayKey) - e.g.
+    // accounts/AccountDetail/Rotation.vue's job history table. Computing
+    // it here in data() instead, where `this` is bound correctly.
+    const formatterArgsDefault = { displayKey: (this.col?.prop || '') + '_display' }
     return {
-      formatterArgs: Object.assign(this.formatterArgsDefault, this.col.formatterArgs)
+      formatterArgs: Object.assign(formatterArgsDefault, this.col.formatterArgs)
     }
   },
   computed: {
