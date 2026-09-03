@@ -27,11 +27,23 @@
           {{ f.name }} — {{ f.reason }}
         </div>
       </div>
+      <!-- Sprint_36 §115-116 - a sensitive transition (Tier 0 away, or
+           Purpose into/out of Reconciliation/Break Glass) is present in
+           the batch; a reason is mandatory before Apply. -->
+      <el-form-item v-if="preview.needs_reason" :label="$t('Reason')" class="reason-field">
+        <el-input v-model="reason" type="textarea" :rows="2" />
+      </el-form-item>
     </div>
 
     <template #footer>
       <el-button size="small" @click="visible = false">{{ $t('Cancel') }}</el-button>
-      <el-button size="small" type="primary" :loading="applying" :disabled="!preview" @click="doApply">
+      <el-button
+        size="small"
+        type="primary"
+        :loading="applying"
+        :disabled="!preview || (preview.needs_reason && !reason.trim())"
+        @click="doApply"
+      >
         {{ $t('Apply') }}
       </el-button>
     </template>
@@ -55,6 +67,7 @@ export default {
     return {
       field: 'security_tier',
       value: '',
+      reason: '',
       preview: null,
       previewing: false,
       applying: false
@@ -93,7 +106,7 @@ export default {
   methods: {
     doPreview() {
       this.previewing = true
-      bulkClassifyAccounts(this.accountIds, this.field, this.value, true)
+      bulkClassifyAccounts(this.accountIds, this.field, this.value, true, this.reason)
         .then((resp) => {
           this.preview = resp
         })
@@ -103,7 +116,7 @@ export default {
     },
     doApply() {
       this.applying = true
-      bulkClassifyAccounts(this.accountIds, this.field, this.value, false)
+      bulkClassifyAccounts(this.accountIds, this.field, this.value, false, this.reason)
         .then((resp) => {
           this.$message.success(`${this.$t('AccountsUpdated')}: ${resp.changed}`)
           this.visible = false

@@ -339,6 +339,35 @@ export const accountFieldsMeta = (vm) => {
       },
       hidden: () => vm.addTemplate
     },
+    // Sprint_36 §115-116 - a reason is required by the backend
+    // (AccountViewSet.perform_update) only for a "sensitive" transition:
+    // Security Tier moving away from Tier 0, or Purpose changing into/out
+    // of Reconciliation/Break Glass. Shown only when the current in-flight
+    // edit is actually one of those, comparing against the account's
+    // original (pre-edit) values in vm.account.
+    classification_change_reason: {
+      label: vm.$t('Reason'),
+      helpTip: vm.$t('ClassificationChangeReasonHelpText'),
+      rules: [Required],
+      el: {
+        type: 'textarea',
+        rows: 2
+      },
+      hidden: (formValue) => {
+        if (vm.addTemplate || !vm.account?.id) {
+          return true
+        }
+        const oldTier = rawChoiceValue(vm.account.security_tier)
+        const newTier = rawChoiceValue(formValue.security_tier)
+        const oldPurpose = rawChoiceValue(vm.account.account_purpose)
+        const newPurpose = rawChoiceValue(formValue.account_purpose)
+        const sensitive = ['RECONCILIATION', 'BREAK_GLASS']
+        const tierLeftZero = oldTier === 'TIER_0' && newTier !== 'TIER_0'
+        const purposeChanged =
+          newPurpose !== oldPurpose && (sensitive.includes(oldPurpose) || sensitive.includes(newPurpose))
+        return !(tierLeftZero || purposeChanged)
+      }
+    },
     password_management_mode: {
       label: vm.$t('PasswordManagementMode'),
       helpTip: vm.$t('PasswordManagementModeHelpText'),

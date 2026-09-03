@@ -109,7 +109,14 @@ export default {
         // panel.
         [
           this.$t('Classification'),
-          ['account_purpose', 'usage_mode', 'concurrency_mode', 'security_tier', 'profile_code']
+          [
+            'account_purpose',
+            'usage_mode',
+            'concurrency_mode',
+            'security_tier',
+            'classification_change_reason',
+            'profile_code'
+          ]
         ],
         [
           this.$t('PasswordManagement'),
@@ -248,6 +255,12 @@ export default {
       if (!form.secret) {
         delete form['secret']
       }
+      // Sprint_36 §115-116 - classification_change_reason is a UI-only
+      // field (not a model field); the backend reads a plain `reason` key.
+      if (form.classification_change_reason) {
+        form.reason = form.classification_change_reason
+      }
+      delete form.classification_change_reason
       if (this.account?.name) {
         if (this.account.payload && this.account.payload === 'pam_account_clone') {
           this.$emit('add', form)

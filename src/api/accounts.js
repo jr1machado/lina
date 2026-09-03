@@ -122,10 +122,13 @@ export function revokeRotationException(exceptionId) {
 }
 
 // Sprint_36 §120-121 - Bulk Classification: preview=true never persists.
-export function bulkClassifyAccounts(accountIds, field, value, preview) {
+// §115-116 - reason is required only for sensitive transitions (Tier 0
+// away, Purpose into/out of Reconciliation/Break Glass); the backend
+// tells us via the preview's needs_reason flag.
+export function bulkClassifyAccounts(accountIds, field, value, preview, reason) {
   return request({
     url: '/api/v1/accounts/accounts/bulk-classification/',
     method: 'post',
-    data: { account_ids: accountIds, field, value, preview }
+    data: { account_ids: accountIds, field, value, preview, reason }
   })
 }
