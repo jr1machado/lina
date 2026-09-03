@@ -1,5 +1,34 @@
 <template>
   <TwoCol>
+    <!-- Sprint_36-Account-Class-Lifecycle.md §76 - "Classification &
+         Lifecycle" block on the account detail. -->
+    <IBox :title="$t('ClassificationAndLifecycle')" class="rotation-status-card">
+      <div class="rotation-row">
+        <span class="rotation-label">{{ $t('AccountPurpose') }}:</span>
+        <el-tag size="small">{{ choiceLabel(object.account_purpose) }}</el-tag>
+      </div>
+      <div class="rotation-row">
+        <span class="rotation-label">{{ $t('UsageMode') }}:</span>
+        <span>{{ choiceLabel(object.usage_mode) }}</span>
+      </div>
+      <div class="rotation-row">
+        <span class="rotation-label">{{ $t('ConcurrencyMode') }}:</span>
+        <span>{{ choiceLabel(object.concurrency_mode) }}</span>
+      </div>
+      <div class="rotation-row">
+        <span class="rotation-label">{{ $t('SecurityTier') }}:</span>
+        <span>{{ choiceLabel(object.security_tier) }}</span>
+      </div>
+      <div class="rotation-row">
+        <span class="rotation-label">{{ $t('PasswordManagementMode') }}:</span>
+        <span>{{ choiceLabel(object.password_management_mode) }}</span>
+      </div>
+      <div class="rotation-row">
+        <span class="rotation-label">{{ $t('PasswordOwner') }}:</span>
+        <span>{{ choiceLabel(object.password_owner) }}</span>
+      </div>
+    </IBox>
+
     <IBox class="rotation-status-card">
       <div class="rotation-row">
         <span class="rotation-label">{{ $t('CredentialCheckStatus') }}:</span>
@@ -46,7 +75,7 @@
           size="small"
           type="primary"
           :loading="rotating"
-          :disabled="object.service_account"
+          :disabled="!isManaged"
           @click="handleRotateNow"
         >
           {{ $t('RotateNow') }}
@@ -54,14 +83,14 @@
         <el-button
           size="small"
           :loading="reconciling"
-          :disabled="object.service_account || object.credential_check_status !== 'INVALID'"
+          :disabled="!isManaged || checkStatusValue !== 'INVALID'"
           @click="handleReconcileNow"
         >
           {{ $t('ReconcileNow') }}
         </el-button>
       </div>
-      <div v-if="object.service_account" class="rotation-hint">
-        {{ $t('ServiceAccountNoRotationHint') }}
+      <div v-if="!isManaged" class="rotation-hint">
+        {{ $t('UnmanagedAccountNoRotationHint') }}
       </div>
     </IBox>
 
@@ -142,6 +171,12 @@ export default {
       return { HEALTHY: 'success', FAILED: 'danger', IN_USE: 'primary', ROTATION_PENDING: 'warning', DISABLED: 'info' }[
         this.object.governance_status
       ] || 'info'
+    },
+    // Sprint_36 §9/DoD02 - the rotation gate is password_management_mode
+    // now, not service_account (see BaseAccount.periodic_rotation).
+    isManaged() {
+      const pmm = this.object.password_management_mode
+      return (pmm && typeof pmm === 'object' ? pmm.value : pmm) === 'MANAGED'
     }
   },
   mounted() {
@@ -150,6 +185,9 @@ export default {
     })
   },
   methods: {
+    choiceLabel(field) {
+      return field && typeof field === 'object' ? field.label : field
+    },
     handlePolicyChange(policyId) {
       this.policyChanging = true
       this.$axios

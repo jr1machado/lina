@@ -120,3 +120,12 @@ export function revokeRotationException(exceptionId) {
     method: 'post'
   })
 }
+
+// Sprint_36 §120-121 - Bulk Classification: preview=true never persists.
+export function bulkClassifyAccounts(accountIds, field, value, preview) {
+  return request({
+    url: '/api/v1/accounts/accounts/bulk-classification/',
+    method: 'post',
+    data: { account_ids: accountIds, field, value, preview }
+  })
+}

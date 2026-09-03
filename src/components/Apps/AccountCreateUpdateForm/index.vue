@@ -1,12 +1,35 @@
 <template>
-  <AutoDataForm
-    v-bind="$data"
-    v-if="!loading"
-    ref="AutoDataForm"
-    :class="addTemplate ? '' : 'account-add'"
-    :submit-btn-text="submitBtnText"
-    @submit="confirm"
-  />
+  <div v-if="!loading">
+    <AutoDataForm
+      v-bind="$data"
+      ref="AutoDataForm"
+      :class="addTemplate ? '' : 'account-add'"
+      :submit-btn-text="submitBtnText"
+      @submit="confirm"
+    />
+    <!-- Sprint_36 §75/DoD24 - live summary of what the current form values
+         actually mean, updates on every field change since it reads
+         `form` directly. -->
+    <div v-if="!addTemplate" class="effective-behavior">
+      <div class="effective-behavior__title">{{ $t('EffectiveSecurityBehavior') }}</div>
+      <div class="effective-behavior__grid">
+        <span>{{ $t('HumanSession') }}</span>
+        <span>{{ effectiveBehavior.humanSession }}</span>
+        <span>{{ $t('Shared') }}</span>
+        <span>{{ effectiveBehavior.shared }}</span>
+        <span>{{ $t('PasswordManagement') }}</span>
+        <span>{{ effectiveBehavior.passwordManagement }}</span>
+        <span>{{ $t('Rotation') }}</span>
+        <span>{{ effectiveBehavior.rotation }}</span>
+        <span>{{ $t('CredentialCheckEnabled') }}</span>
+        <span>{{ effectiveBehavior.credentialCheck }}</span>
+        <span>{{ $t('AutoReconcile') }}</span>
+        <span>{{ effectiveBehavior.autoReconcile }}</span>
+        <span>{{ $t('SecurityTier') }}</span>
+        <span>{{ effectiveBehavior.securityTier }}</span>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -81,26 +104,67 @@ export default {
           ]
         ],
         [this.$t('Other'), ['push_now', 'params', 'on_invalid', 'is_active', 'comment']],
+        // Sprint_36-Account-Class-Lifecycle.md §71-76 DoD23 - Classification
+        // + Password Management replace the old flat "Governance" checkbox
+        // panel.
         [
-          this.$t('Governance'),
+          this.$t('Classification'),
+          ['account_purpose', 'usage_mode', 'concurrency_mode', 'security_tier', 'profile_code']
+        ],
+        [
+          this.$t('PasswordManagement'),
           [
-            'service_account',
-            'reconciliation_account',
-            'auto_reconcile',
-            'break_glass',
-            'is_shared',
-            'exclusive_use',
+            'password_management_mode',
+            'password_owner',
+            'identity_source',
             'dedicated_pam_account',
             'credential_check_enabled',
             'rotation_interval',
-            'identity_source',
-            'password_owner',
-            'profile_code'
+            'auto_reconcile'
           ]
         ]
       ],
       fieldsMeta: accountFieldsMeta(this),
       hasSaveContinue: false
+    }
+  },
+  computed: {
+    // Sprint_36 §75 - pure read of current form values, no request, no
+    // extra state to keep in sync.
+    effectiveBehavior() {
+      const f = this.form || {}
+      const yesNo = (v) => (v ? this.$t('Yes') : this.$t('No'))
+      // Choice fields come back from the API as {value, label} once an
+      // existing account is loaded into the form, but as a bare string
+      // while the user is picking a new value in the still-unsaved form -
+      // both shapes have to be handled here.
+      const raw = (v) => (v && typeof v === 'object' ? v.value : v)
+      const label = (v) => (v && typeof v === 'object' ? v.label : v)
+      const usage = raw(f.usage_mode)
+      const purpose = raw(f.account_purpose)
+      const humanSession =
+        usage === 'SYSTEM_ONLY'
+          ? this.$t('Disabled')
+          : usage === 'EMERGENCY_ONLY'
+            ? this.$t('EmergencyOnly')
+            : this.$t('Allowed')
+      const pmm = raw(f.password_management_mode)
+      const passwordManagement =
+        pmm === 'MANAGED'
+          ? this.$t('ManagedByHashAccess')
+          : pmm === 'EXTERNALLY_MANAGED'
+            ? this.$t('ExternallyManaged')
+            : this.$t('Unmanaged')
+      const rotation = pmm !== 'MANAGED' ? this.$t('NotApplicable') : this.$t('AccordingToRotationPolicy')
+      return {
+        humanSession,
+        shared: yesNo(usage === 'SHARED'),
+        passwordManagement,
+        rotation,
+        credentialCheck: yesNo(f.credential_check_enabled),
+        autoReconcile: purpose === 'RECONCILIATION' ? this.$t('NotApplicable') : yesNo(f.auto_reconcile),
+        securityTier: label(f.security_tier) || this.$t('NotApplicable')
+      }
     }
   },
   watch: {
@@ -199,6 +263,31 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.effective-behavior {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--el-border-color, #dcdfe6);
+  border-radius: 4px;
+  background: var(--el-fill-color-light, #f5f7fa);
+
+  &__title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 16px;
+    font-size: 13px;
+
+    span:nth-child(odd) {
+      color: var(--color-text-secondary, #909399);
+    }
+  }
+}
+
 .account-add {
   :deep(.el-form-item) {
     //margin-bottom: 5px;

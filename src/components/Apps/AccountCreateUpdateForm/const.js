@@ -6,6 +6,10 @@ import AutomationParamsForm from '@/views/assets/Platform/AutomationParamsSettin
 
 export const accountFieldsMeta = (vm) => {
   const defaultPrivilegedAccounts = ['root', 'administrator']
+  // Sprint_36 §71-76 - choice fields arrive as a bare string while the
+  // form is unsaved, but as {value, label} once loaded from an existing
+  // account.
+  const rawChoiceValue = (v) => (v && typeof v === 'object' ? v.value : v)
 
   function onPrivilegedUser(value, updateForm) {
     const maybePrivileged = defaultPrivilegedAccounts.includes(value)
@@ -286,12 +290,18 @@ export const accountFieldsMeta = (vm) => {
         }
       }
     },
-    // S34 - account category flags. This form is the single place to set
-    // them; Rotation.vue/Recovery.vue/KRI dashboard only ever read them
-    // back from the same Account fields.
-    service_account: {
-      label: vm.$t('ServiceAccount'),
-      helpTip: vm.$t('ServiceAccountHelpText'),
+    // Sprint_36-Account-Class-Lifecycle.md §71-76 - account_purpose is the
+    // one choice the admin makes; usage_mode/concurrency_mode are shown
+    // read-only (disabled) whenever the purpose forces them, since
+    // BaseAccount.apply_purpose_governance() overwrites them server-side
+    // regardless of what's submitted - showing them as editable would be
+    // misleading. The old checkbox panel (service_account, break_glass,
+    // is_shared, exclusive_use, reconciliation_account) is gone from this
+    // form: those fields still exist on the account (kept in sync by the
+    // backend, §102-103) but are no longer something an admin sets here.
+    account_purpose: {
+      label: vm.$t('AccountPurpose'),
+      helpTip: vm.$t('AccountPurposeHelpText'),
       el: {
         get disabled() {
           return vm.isDisabled
@@ -299,9 +309,39 @@ export const accountFieldsMeta = (vm) => {
       },
       hidden: () => vm.addTemplate
     },
-    reconciliation_account: {
-      label: vm.$t('ReconciliationAccount'),
-      helpTip: vm.$t('ReconciliationAccountHelpText'),
+    usage_mode: {
+      label: vm.$t('UsageMode'),
+      helpTip: vm.$t('UsageModeHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled || ['RECONCILIATION', 'BREAK_GLASS'].includes(rawChoiceValue(vm.form.account_purpose))
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    concurrency_mode: {
+      label: vm.$t('ConcurrencyMode'),
+      helpTip: vm.$t('ConcurrencyModeHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled || rawChoiceValue(vm.form.account_purpose) === 'BREAK_GLASS'
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    security_tier: {
+      label: vm.$t('SecurityTier'),
+      helpTip: vm.$t('SecurityTierHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        }
+      },
+      hidden: () => vm.addTemplate
+    },
+    password_management_mode: {
+      label: vm.$t('PasswordManagementMode'),
+      helpTip: vm.$t('PasswordManagementModeHelpText'),
       el: {
         get disabled() {
           return vm.isDisabled
@@ -311,42 +351,12 @@ export const accountFieldsMeta = (vm) => {
     },
     auto_reconcile: {
       label: vm.$t('RecoveryAutoReconcile'),
-      hidden: (formValue) => vm.addTemplate || !formValue.reconciliation_account,
+      hidden: (formValue) => vm.addTemplate || rawChoiceValue(formValue.account_purpose) !== 'RECONCILIATION',
       el: {
         get disabled() {
           return vm.isDisabled
         }
       }
-    },
-    break_glass: {
-      label: vm.$t('BreakGlass'),
-      helpTip: vm.$t('BreakGlassHelpText'),
-      el: {
-        get disabled() {
-          return vm.isDisabled
-        }
-      },
-      hidden: () => vm.addTemplate
-    },
-    is_shared: {
-      label: vm.$t('Shared'),
-      helpTip: vm.$t('SharedHelpText'),
-      el: {
-        get disabled() {
-          return vm.isDisabled
-        }
-      },
-      hidden: () => vm.addTemplate
-    },
-    exclusive_use: {
-      label: vm.$t('ExclusiveUse'),
-      helpTip: vm.$t('ExclusiveUseHelpText'),
-      el: {
-        get disabled() {
-          return vm.isDisabled
-        }
-      },
-      hidden: () => vm.addTemplate
     },
     dedicated_pam_account: {
       label: vm.$t('DedicatedPamAccount'),
@@ -375,7 +385,7 @@ export const accountFieldsMeta = (vm) => {
           return vm.isDisabled
         }
       },
-      hidden: (formValue) => vm.addTemplate || formValue.service_account
+      hidden: (formValue) => vm.addTemplate || rawChoiceValue(formValue.password_management_mode) !== 'MANAGED'
     },
     identity_source: {
       label: vm.$t('IdentitySource'),

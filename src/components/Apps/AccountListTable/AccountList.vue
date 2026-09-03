@@ -46,6 +46,11 @@
       v-model:visible="showPasswordHistoryDialog"
       :account="currentAccountColumn"
     />
+    <BulkClassificationDialog
+      v-model="bulkClassificationDialog.visible"
+      :selected-rows="bulkClassificationDialog.selectedRows"
+      @applied="() => $refs.ListTable.reloadTable()"
+    />
   </div>
 </template>
 
@@ -72,6 +77,7 @@ import AccountCreateUpdate from './AccountCreateUpdate.vue'
 import PasswordHistoryDialog from './PasswordHistoryDialog.vue'
 import DrawerListTable from '@/components/Table/DrawerListTable/index.vue'
 import AccountBulkUpdateDialog from '@/components/Apps/AccountListTable/AccountBulkUpdateDialog.vue'
+import BulkClassificationDialog from '@/components/Apps/AccountListTable/BulkClassificationDialog.vue'
 
 export default {
   name: 'AccountListTable',
@@ -82,7 +88,8 @@ export default {
     UpdateSecretInfo,
     AccountCreateUpdate,
     PasswordHistoryDialog,
-    AccountBulkUpdateDialog
+    AccountBulkUpdateDialog,
+    BulkClassificationDialog
   },
   props: {
     url: {
@@ -436,6 +443,18 @@ export default {
               vm.updateSelectedDialogSetting.selectedRows = selectedRows
               vm.updateSelectedDialogSetting.visible = true
             }
+          },
+          {
+            name: 'BulkClassification',
+            title: this.$t('BulkClassification'),
+            icon: 'batch-update',
+            can: ({ selectedRows }) => {
+              return selectedRows.length > 0 && vm.$hasPerm('accounts.change_account_classification')
+            },
+            callback: ({ selectedRows }) => {
+              vm.bulkClassificationDialog.selectedRows = selectedRows
+              vm.bulkClassificationDialog.visible = true
+            }
           }
         ],
         canBulkDelete: vm.$hasPerm('accounts.delete_account'),
@@ -446,6 +465,10 @@ export default {
         hasSearch: true
       },
       updateSelectedDialogSetting: {
+        visible: false,
+        selectedRows: []
+      },
+      bulkClassificationDialog: {
         visible: false,
         selectedRows: []
       }
