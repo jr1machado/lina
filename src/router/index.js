@@ -32,6 +32,7 @@ import ticketsRoutes from './tickets'
 import settingsRoutes from './settings'
 import profileRoutes from './profile'
 import pamViewRoutes from './pam'
+import repositoryViewRoutes from './repository'
 import reportsViewRoutes from './reports'
 import { getPropView } from '@/utils/jms/index'
 import store from '@/store'
@@ -88,6 +89,7 @@ export const constantRoutes = [
 export const viewRoutes = [
   consoleViewRoutes,
   pamViewRoutes,
+  repositoryViewRoutes,
   auditViewRoutes,
   workbenchViewRoutes,
   ticketsRoutes,

@@ -1,4 +1,4 @@
-import { getProfile as apiGetProfile, logout } from '@/api/users'
+import { getProfile as apiGetProfile, getLinaPreference, logout } from '@/api/users'
 import {
   getCurrentOrgLocal,
   getPreOrgLocal,
@@ -8,6 +8,7 @@ import {
 } from '@/utils/jms/auth'
 import orgUtil from '@/utils/jms/org'
 import { resetRouter } from '@/router'
+import { applyUiTheme } from '@/utils/theme'
 import store from '@/store'
 import _ from 'lodash'
 
@@ -29,7 +30,20 @@ const getDefaultState = () => {
     isOrgAdmin: false,
     isAdmin: false,
     hasAdminPerm: false,
-    hasAuditPerm: false
+    hasAuditPerm: false,
+    // 2026-09-04 - user preference (users.Preference, category=lina,
+    // basic.collapse_asset_tree - see profile/Preferences/Lina.vue).
+    // Defaults to collapsed (true) for a less cluttered screen; fetched
+    // once alongside the profile in getProfile() below, read directly by
+    // Table/TreeTable (the single component behind every asset/type tree
+    // in both admin and end-user views) instead of each page fetching it.
+    collapseAssetTree: true,
+    // 2026-09-04 - Web interface theme (users.Preference, category=lina,
+    // basic.ui_theme). Distinct from the Luna *terminal window* theme
+    // (users.const.Themes / preference/luna.py) - this one recolors the
+    // Lina admin/operator interface itself via <html class="dark">
+    // (default-theme.scss). 'default' | 'dark'.
+    uiTheme: 'default'
   }
 }
 
@@ -88,6 +102,12 @@ const mutations = {
   SET_MFA_VERIFY(state) {
     state.MFAVerifyAt = new Date().valueOf()
   },
+  SET_COLLAPSE_ASSET_TREE(state, value) {
+    state.collapseAssetTree = value
+  },
+  SET_UI_THEME(state, value) {
+    state.uiTheme = value
+  },
   ADD_WORKBENCH_ORGS(state, org) {
     state.workbenchOrgs.push(org)
   },
@@ -98,7 +118,7 @@ const mutations = {
 
 const actions = {
   // get user Profile
-  getProfile({ commit, state }, refresh = false) {
+  getProfile({ commit, state, dispatch }, refresh = false) {
     return new Promise((resolve, reject) => {
       if (!refresh && state.profile && Object.keys(state.profile).length > 0) {
         resolve(state.profile)
@@ -115,6 +135,7 @@ const actions = {
             return
           }
           commit('SET_PROFILE', response)
+          dispatch('getCollapseAssetTreePreference')
           resolve(response)
         })
         .catch((error) => {
@@ -122,6 +143,26 @@ const actions = {
           reject(error)
         })
     })
+  },
+  // 2026-09-04 - fetched once alongside the profile, not per tree-table
+  // mount. A failure here just keeps the default (collapsed) - never
+  // blocks login/profile loading over a preferences fetch. Also applies
+  // the saved Web interface theme (basic.ui_theme) from the same
+  // response - one GET covers both preferences, no second network call.
+  getCollapseAssetTreePreference({ commit }) {
+    getLinaPreference()
+      .then((data) => {
+        const value = data?.basic?.collapse_asset_tree
+        if (typeof value === 'boolean') {
+          commit('SET_COLLAPSE_ASSET_TREE', value)
+        }
+        const theme = data?.basic?.ui_theme
+        if (theme === 'dark' || theme === 'default') {
+          commit('SET_UI_THEME', theme)
+          applyUiTheme(theme)
+        }
+      })
+      .catch(() => {})
   },
   addAdminOrg({ commit, state }, org) {
     commit('ADD_ORG', org)

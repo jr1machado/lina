@@ -55,6 +55,11 @@ $menu-hover: #ffffff;
   --menu-text-active: #{$menu-text-active};
   --menu-hover: #{$menu-hover};
 
+  /* 2026-09-04 - page canvas background, read by body{} in index.scss.
+     Was implicitly the browser default white (nothing set it), so dark
+     mode below is the first thing to ever define it. */
+  --color-bg-page: #ffffff;
+
   /* Element Plus CSS 变量覆盖 */
   --el-color-primary: #{$color-primary};
   --el-color-success: #{$color-success};
@@ -66,4 +71,42 @@ $menu-hover: #ffffff;
   --el-font-size-base: 13px;
   --el-input-height: 30px;
   --el-border-radius-base: 0;
+}
+
+// 2026-09-04 - dark mode for the general web interface (distinct from the
+// per-user Luna *terminal window* theme in users.const.Themes/
+// preference/luna.py - that one only recolors koko/luna session windows).
+// Toggled via <html class="dark"> (users.js store / GenericCreateUpdateForm
+// preference save), same class Element Plus's own dark stylesheet
+// (imported in main.js) targets, so el-* components (cards, tables,
+// inputs, dialogs - most of the app's surface, see CLAUDE.md component
+// conventions) repaint automatically. This block only needs to cover our
+// own custom vars (menu/page chrome) and re-assert brand colors over
+// Element's generic dark blue, since it loads after Element's dark
+// stylesheet in main.js and matches its specificity (html.dark).
+html.dark {
+  --color-text-primary: #e5eaf3;
+  --color-text-secondary: #a3a6ad;
+  --color-icon-primary: #cfd3dc;
+  --color-border: #4c4d4f;
+  --color-input-border: #4c4d4f;
+  --color-disabled-background: #262727;
+  --color-disabled: #6c6e72;
+  --color-help-text: #a3a6ad;
+  --color-bg-page: #0a0a0a;
+
+  --banner-bg: #{$banner-bg};
+  --submenu-bg: #1d1e1f;
+  --menu-bg: #1d1e1f;
+  --menu-text: #cfd3dc;
+  --menu-text-active: #{$color-primary};
+  --menu-hover: #262727;
+  --menu-border: #303030;
+
+  --el-color-primary: #{$color-primary};
+  --el-color-success: #{$color-success};
+  --el-color-info: #{$color-info};
+  --el-color-warning: #{$color-warning};
+  --el-color-danger: #{$color-danger};
+  --el-color-error: #{$color-error};
 }

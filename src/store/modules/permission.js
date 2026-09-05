@@ -196,7 +196,13 @@ const actions = {
     console.log('Start generate view routes, to: ', to, 'from: ', from)
     return new Promise((resolve) => {
       const path = to.path
-      const re = new RegExp('/(\\w+)/?.*')
+      // 2026-09-04 fix - was `\w+` (no hyphen), so a hyphenated first path
+      // segment (e.g. /credential-repository/...) only matched up to the
+      // hyphen ("credential"), never equaling that module's
+      // meta.view ("credential-repository") - currentViewRoute stayed {},
+      // and the left sidebar silently rendered zero items for that
+      // module. `[\w-]+` matches the whole segment.
+      const re = new RegExp('/([\\w-]+)/?.*')
       const matched = path.match(re)
       if (!matched) {
         console.debug('Not match path, set default routes', path)

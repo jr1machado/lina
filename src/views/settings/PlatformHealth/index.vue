@@ -160,6 +160,58 @@
         </el-table>
       </IBox>
 
+      <IBox title="DatabaseBackupRestore" class="ph-row">
+        <p class="ph-empty">{{ $t('BackupRestoreScopeNote') }}</p>
+        <div class="ph-backup-actions">
+          <el-button
+            v-if="isSuperAdmin"
+            size="small"
+            type="primary"
+            :loading="backupRunning"
+            @click="runBackupNow"
+          >
+            {{ $t('RunBackupNow') }}
+          </el-button>
+          <span v-else class="ph-empty">{{ $t('SuperAdminOnly') }}</span>
+        </div>
+        <el-table :data="backups" size="small" :empty-text="$t('NoBackupsYet')" class="ph-backup-table">
+          <el-table-column prop="name" :label="$t('Name')" />
+          <el-table-column :label="$t('Size')" width="110">
+            <template #default="{ row }">{{ formatBytes(row.size_bytes) }}</template>
+          </el-table-column>
+          <el-table-column :label="$t('Created')" width="200">
+            <template #default="{ row }">{{ formatSince(row.created_at) }}</template>
+          </el-table-column>
+          <el-table-column v-if="isSuperAdmin" :label="$t('Actions')" width="110">
+            <template #default="{ row }">
+              <el-button link type="danger" size="small" @click="openRestoreDialog(row)">
+                {{ $t('Restore') }}
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </IBox>
+
+      <el-dialog v-model="restoreDialog" :title="$t('RestoreDatabase')" width="480px">
+        <el-alert type="warning" :closable="false" show-icon class="ph-restore-warning" :title="$t('RestoreWarning')" />
+        <el-form label-position="top">
+          <el-form-item :label="$t('TypeBackupNameToConfirm', { name: restoreTarget?.name })">
+            <el-input v-model="restoreConfirmName" :placeholder="restoreTarget?.name" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="restoreDialog = false">{{ $t('Cancel') }}</el-button>
+          <el-button
+            type="danger"
+            :loading="restoring"
+            :disabled="restoreConfirmName !== restoreTarget?.name"
+            @click="confirmRestore"
+          >
+            {{ $t('Restore') }}
+          </el-button>
+        </template>
+      </el-dialog>
+
       <IBox title="ActiveAlerts" class="ph-row">
         <el-table :data="alerts.alerts || []" size="small" :empty-text="$t('NoActiveAlerts')">
           <el-table-column prop="severity" label="Severity" width="110">
@@ -207,10 +259,19 @@ export default {
       alerts: {},
       users: {},
       timer: null,
-      clock: null
+      clock: null,
+      backups: [],
+      backupRunning: false,
+      restoreDialog: false,
+      restoreTarget: null,
+      restoreConfirmName: '',
+      restoring: false
     }
   },
   computed: {
+    isSuperAdmin() {
+      return !!this.$store.state.users?.isSuperAdmin
+    },
     updatedLabel() {
       if (!this.lastUpdated) return '-'
       const secs = Math.max(0, Math.floor((this.now - this.lastUpdated) / 1000))
@@ -230,6 +291,7 @@ export default {
   },
   mounted() {
     this.fetchAll()
+    this.fetchBackups()
     this.timer = setInterval(this.fetchAll, REFRESH_INTERVAL_MS)
     this.clock = setInterval(() => {
       this.now = Date.now()
@@ -309,6 +371,43 @@ export default {
     formatSince(iso) {
       if (!iso) return '-'
       return new Date(iso).toLocaleString()
+    },
+    async fetchBackups() {
+      const data = await this.$axios.get('/api/v1/ops/platform-health/backups/')
+      this.backups = data.backups || []
+    },
+    async runBackupNow() {
+      // A 412 (fresh MFA required - terminal.permissions.IsSuperUserWithActiveMFA)
+      // is handled transparently by the global axios interceptor
+      // (src/utils/request.js: shows the MFA confirm dialog, retries this
+      // same call once confirmed) - no custom MFA UI needed here.
+      this.backupRunning = true
+      try {
+        await this.$axios.post('/api/v1/ops/platform-health/backups/run/')
+        this.$message.success(this.$t('BackupCompleted'))
+        await this.fetchBackups()
+      } finally {
+        this.backupRunning = false
+      }
+    },
+    openRestoreDialog(row) {
+      this.restoreTarget = row
+      this.restoreConfirmName = ''
+      this.restoreDialog = true
+    },
+    async confirmRestore() {
+      this.restoring = true
+      try {
+        await this.$axios.post('/api/v1/ops/platform-health/backups/restore/', {
+          name: this.restoreTarget.name,
+          confirm_name: this.restoreConfirmName
+        })
+        this.$message.success(this.$t('RestoreCompleted'))
+        this.restoreDialog = false
+        await this.fetchBackups()
+      } finally {
+        this.restoring = false
+      }
     }
   }
 }
@@ -338,5 +437,14 @@ export default {
 .ph-empty {
   color: var(--el-text-color-secondary);
   font-size: 13px;
+}
+.ph-backup-actions {
+  margin: 8px 0 12px;
+}
+.ph-backup-table {
+  margin-top: 8px;
+}
+.ph-restore-warning {
+  margin-bottom: 16px;
 }
 </style>

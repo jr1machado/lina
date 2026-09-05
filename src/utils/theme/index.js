@@ -63,6 +63,25 @@ export function changeElementColor(themeColors) {
   styleTag.innerText = cssText + colorsCssText
 }
 
+// 2026-09-04 - Web interface light/dark theme (users.Preference,
+// category=lina, basic.ui_theme). Distinct from changeThemeColors above
+// (platform-wide brand color customization, Settings > Interface) and
+// from the per-user Luna *terminal window* theme (users.const.Themes) -
+// this one toggles <html class="dark">, which both Element Plus's own
+// dark stylesheet and the html.dark block in styles/default-theme.scss
+// key off of. Mirrored to localStorage so main.js can apply it
+// synchronously on the next load, before the preference API call
+// returns (avoids a flash of the wrong theme).
+export function applyUiTheme(theme) {
+  const isDark = theme === 'dark'
+  document.documentElement.classList.toggle('dark', isDark)
+  try {
+    localStorage.setItem('ui_theme', isDark ? 'dark' : 'default')
+  } catch (e) {
+    // ignore (privacy mode / storage disabled)
+  }
+}
+
 export function changeThemeColors(themeColors) {
   // 主题色现在完全由 CSS 变量驱动（setRootColors / changeMenuColor 同步 --color-* 与
   // --el-color-*），不再拉取并注入 Element UI 时代的 element-extra.css——那份样式里的

@@ -83,11 +83,15 @@ function ifUnauthorized({ response, error }) {
 
 function ifBadRequest({ response, error }) {
   if (response.status === 400) {
-    if (response.data?.detail) {
-      error.message = response.data.detail
-    } else {
-      error.message = i18n.t('BadRequestErrorMsg')
-    }
+    // 2026-09-04 fix - only checked response.data.detail, but DRF field
+    // validation errors come back shaped {"name": ["already exists"]}
+    // with no top-level "detail" key, so every field-level 400 (wrong
+    // form, any form) silently fell through to the generic
+    // BadRequestErrorMsg with no indication of which field or why.
+    // getErrorResponseMsg (utils/common) already knows how to walk that
+    // shape - it just wasn't wired in here.
+    const fieldMsg = getErrorResponseMsg(error)
+    error.message = fieldMsg || i18n.t('BadRequestErrorMsg')
   }
   if (response.status === 403) {
     error.message = i18n.t('BadRoleErrorMsg')

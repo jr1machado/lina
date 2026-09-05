@@ -9,6 +9,7 @@
       :submit-method="submitMethod"
       :url="url"
       class="password-update"
+      @submit-success="onSubmitSuccess"
     />
   </IBox>
 </template>
@@ -109,6 +110,14 @@ export default {
     },
     submitMethod() {
       return 'patch'
+    },
+    // 2026-09-04 - a saved preference (theme, language, tree default...)
+    // should be visibly in effect right away, not only after the user
+    // happens to navigate elsewhere. A full reload is the simple, honest
+    // way to guarantee that for every field on this page (not just
+    // theme) rather than tracking which field changed.
+    onSubmitSuccess() {
+      window.location.reload()
     },
     mergeObjects(target, ...sources) {
       for (const source of sources) {

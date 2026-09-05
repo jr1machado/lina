@@ -24,6 +24,14 @@ export async function getProfile(token) {
   return profile
 }
 
+// 2026-09-04 - Lina category of users.Preference (profile/Preferences/Lina.vue).
+export function getLinaPreference() {
+  return request({
+    url: '/api/v1/users/preference/?category=lina',
+    method: 'get'
+  })
+}
+
 export function getUserList(data) {
   return request({
     url: '/api/v1/users/users/',

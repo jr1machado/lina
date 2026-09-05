@@ -3,10 +3,24 @@ import ElementPlus from 'element-plus'
 import { getElementLocale } from '@/i18n/langs'
 import { getLangCode } from '@/i18n/utils'
 import 'element-plus/dist/index.css'
+// html.dark 深色变量 - 2026-09-04 加入 Web 界面深色模式，见 default-theme.scss
+// 里对应的 html.dark 块（只有加了 dark class 才生效，不影响默认浅色主题）。
+import 'element-plus/theme-chalk/dark/css-vars.css'
 // 导入 Element Plus CSS 变量配置（需要在 Element Plus 样式之后，自定义样式之前）
 import '@/styles/element-plus-vars.scss'
 // 导入默认主题配置（包含 :root CSS 变量定义）
 import '@/styles/default-theme.scss'
+// 尽早读取上次选择的 Web 界面主题（users.Preference, category=lina,
+// basic.ui_theme），避免等 profile/preference 接口返回才切换造成的闪烁。
+// 只是本地缓存的镜像 - 真实来源仍是后端偏好设置，store/modules/users.js
+// 的 getUiThemePreference 会在登录后用服务器返回值校正/覆盖它。
+try {
+  if (localStorage.getItem('ui_theme') === 'dark') {
+    document.documentElement.classList.add('dark')
+  }
+} catch (e) {
+  // ignore (privacy mode / storage disabled)
+}
 import '@/styles/index.scss' // global css
 // 导入默认主题配置并初始化
 import { setRootColors } from '@/utils/theme/color'

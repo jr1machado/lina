@@ -71,6 +71,7 @@ import AutoDataZTree from '@/components/Tree/AutoDataZTree/index.vue'
 import { setUrlParam } from '@/utils/common/index'
 import { omitVueListeners, pickVueListeners } from '@/utils/vue'
 import TabTree from '../TabTree/index.vue'
+import store from '@/store'
 
 export default {
   name: 'TreeTable',
@@ -129,7 +130,14 @@ export default {
   data() {
     return {
       iTableConfig: this.tableConfig,
-      iShowTree: this.showTree,
+      // 2026-09-04 - defaults collapsed for a less cluttered screen
+      // (store.state.users.collapseAssetTree, users.Preference
+      // category=lina, toggle in Settings > Preferences > Lina) unless
+      // the page embedding this tree explicitly forces showTree=false
+      // (which must still win either way). The left arrow
+      // (.mini-button below) always lets the user expand/collapse for
+      // the rest of that visit, regardless of this default.
+      iShowTree: this.showTree && !store.state.users.collapseAssetTree,
       componentKey: 0,
       componentTreeKey: 0
     }
