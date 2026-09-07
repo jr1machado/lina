@@ -16,7 +16,7 @@
               @click="form.category = c"
             >
               <el-icon class="category-tile-icon"><component :is="categoryIcon(c)" /></el-icon>
-              <span>{{ c }}</span>
+              <span>{{ categoryLabelOf(c) }}</span>
             </div>
           </div>
         </el-form-item>
@@ -227,6 +227,10 @@
           </el-form-item>
         </template>
 
+        <template v-else-if="isGrouped">
+          <el-alert type="info" :closable="false" show-icon :title="$t('GroupedRecordNotice', { max: groupedMaxMembers })" />
+        </template>
+
         <template v-else>
           <el-form-item :label="$t('Username')">
             <el-input v-model="form.username" />
@@ -334,13 +338,14 @@
 <script>
 import { Page } from '@/layout/components'
 import { IBox } from '@/components'
-import { categoryIcon } from '@/utils/repository/categoryIcons'
+import { categoryIcon, categoryLabel } from '@/utils/repository/categoryIcons'
 
 const CATEGORIES = [
   'GENERIC_CREDENTIAL', 'SERVER_MANAGEMENT', 'NETWORK_CREDENTIAL', 'SNMP',
   'API_CREDENTIAL', 'SOFTWARE_LICENSE', 'APPLICATION_CREDENTIAL', 'DATABASE_CREDENTIAL',
-  'CERTIFICATE', 'SSH_KEY'
+  'CERTIFICATE', 'SSH_KEY', 'GROUPED_10', 'GROUPED_20', 'GROUPED_30'
 ]
+const GROUPED_MAX_MEMBERS = { GROUPED_10: 10, GROUPED_20: 20, GROUPED_30: 30 }
 
 export default {
   name: 'EntryCreateUpdate',
@@ -376,6 +381,12 @@ export default {
     licenseOveruse() {
       const { total_licenses: total, licenses_in_use: used } = this.form.category_fields
       return total !== undefined && used !== undefined && used > total
+    },
+    isGrouped() {
+      return Object.prototype.hasOwnProperty.call(GROUPED_MAX_MEMBERS, this.form.category)
+    },
+    groupedMaxMembers() {
+      return GROUPED_MAX_MEMBERS[this.form.category] || 0
     }
   },
   watch: {
@@ -389,6 +400,9 @@ export default {
   methods: {
     categoryIcon(c) {
       return categoryIcon(c)
+    },
+    categoryLabelOf(c) {
+      return categoryLabel(c)
     },
     async loadCollections() {
       const data = await this.$axios.get('/api/v1/repository/collections/', { params: { limit: 999 } })
@@ -423,6 +437,8 @@ export default {
         if (!this.form.password) missing.push(this.$t('PrivateKey'))
       } else if (this.form.category === 'SSH_KEY') {
         if (!this.form.password) missing.push(this.$t('PrivateKey'))
+      } else if (this.isGrouped) {
+        // no secret of its own - members are added afterward on the detail page
       } else if (!this.form.password) {
         missing.push(this.$t('Password'))
       }
@@ -438,9 +454,12 @@ export default {
         .split('\n').map((s) => s.trim()).filter(Boolean)
       this.submitting = true
       try {
-        await this.$axios.post('/api/v1/repository/entries/', this.form)
+        const data = await this.$axios.post('/api/v1/repository/entries/', this.form)
         this.$message.success(this.$t('SavedSuccessfully'))
-        this.$router.push({ name: 'RepositoryCredentials' })
+        // grouped records land on Detail so members can be added right away
+        this.$router.push(this.isGrouped
+          ? { name: 'RepositoryCredentialDetail', params: { id: data.id } }
+          : { name: 'RepositoryCredentials' })
       } finally {
         this.submitting = false
       }

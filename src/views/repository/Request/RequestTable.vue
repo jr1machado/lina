@@ -20,9 +20,10 @@ export default {
       tableConfig: {
         url: '/api/v1/repository/requests/',
         permissions: { app: 'repository', resource: 'repositoryrequest' },
-        columns: ['entry_name', 'tier', 'collection_name', 'requester_name', 'status', 'date_created', 'actions'],
+        columns: ['entry_name', 'action_type', 'tier', 'collection_name', 'requester_name', 'status', 'date_created', 'actions'],
         columnsMeta: {
           entry_name: { label: this.$t('Credential'), width: '200px' },
+          action_type: { label: this.$t('RequestType') },
           requester_name: { label: this.$t('Requester') },
           collection_name: { label: this.$t('Collection') },
           date_created: { label: this.$t('Requested') },

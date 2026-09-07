@@ -3,6 +3,9 @@
     <IBox v-if="req" :title="$t('CredentialAccessRequest')">
       <el-descriptions :column="1" border>
         <el-descriptions-item :label="$t('Credential')">{{ req.entry_name }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('RequestType')">
+          {{ req.action_type === 'DELETE' ? $t('RequestDeletion') : $t('AccessRequest') }}
+        </el-descriptions-item>
         <el-descriptions-item :label="$t('Tier')">{{ req.tier }}</el-descriptions-item>
         <el-descriptions-item :label="$t('Requester')">{{ req.requester_name }}</el-descriptions-item>
         <el-descriptions-item :label="$t('Collection')">{{ req.collection_name }}</el-descriptions-item>

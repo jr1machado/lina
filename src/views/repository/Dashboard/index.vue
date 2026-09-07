@@ -54,6 +54,29 @@
       </IBox>
     </div>
 
+    <!-- distribution cards - CSS bars, no chart lib (S38 section 79 still
+         applies: signals, not an analytics dashboard). -->
+    <div class="distribution-row">
+      <IBox :title="$t('TierDistribution')" class="distribution-box">
+        <div v-for="row in tierRows" :key="row.key" class="dist-bar-row" @click="goCredentials({ security_tier: row.key })">
+          <span class="dist-bar-label">{{ row.label }}</span>
+          <div class="dist-bar-track">
+            <div class="dist-bar-fill" :class="row.klass" :style="{ width: barWidth(row.count, tierTotal) }" />
+          </div>
+          <span class="dist-bar-count">{{ row.count }}</span>
+        </div>
+      </IBox>
+      <IBox :title="$t('SensitivityDistribution')" class="distribution-box">
+        <div v-for="row in sensitivityRows" :key="row.key" class="dist-bar-row" @click="goCredentials({ sensitivity: row.key })">
+          <span class="dist-bar-label">{{ row.label }}</span>
+          <div class="dist-bar-track">
+            <div class="dist-bar-fill" :class="row.klass" :style="{ width: barWidth(row.count, sensitivityTotal) }" />
+          </div>
+          <span class="dist-bar-count">{{ row.count }}</span>
+        </div>
+      </IBox>
+    </div>
+
     <div class="home-layout">
       <div class="home-main">
         <IBox>
@@ -153,10 +176,8 @@
           @click="goCredentials({ category: c.category })"
         >
           <el-icon class="tech-icon"><component :is="categoryIcon(c.category)" /></el-icon>
-          <div>
-            <div class="tech-count">{{ c.count }}</div>
-            <div class="tech-label">{{ c.category }}</div>
-          </div>
+          <span class="tech-count">{{ c.count }}</span>
+          <span class="tech-label">{{ categoryLabel(c.category) }}</span>
         </div>
       </div>
     </IBox>
@@ -167,7 +188,7 @@
 import EntryTable from '../Entry/EntryTable.vue'
 import { Page } from '@/layout/components'
 import { IBox } from '@/components'
-import { categoryIcon } from '@/utils/repository/categoryIcons'
+import { categoryIcon, categoryLabel } from '@/utils/repository/categoryIcons'
 
 // 2026-09-04 - dashboard is now the module's landing page (INFO/INSPI
 // mockups); the filterable full list moved to Entry/EntryList.vue
@@ -192,6 +213,29 @@ export default {
       // ORDERING_PARAM is "order", not DRF's default "ordering" (see
       // jumpserver/settings/libs.py DEFAULT_FILTER_BACKENDS).
       return this.quickTab === 'favorites' ? { favorites: 'true' } : { order: '-date_updated' }
+    },
+    tierRows() {
+      const counts = {}
+      ;(this.summary.by_tier || []).forEach((r) => { counts[r.security_tier] = r.count })
+      return [
+        { key: 'TIER_0', label: 'Tier 0', klass: 'accent-red', count: counts.TIER_0 || 0 },
+        { key: 'TIER_1', label: 'Tier 1', klass: 'accent-orange', count: counts.TIER_1 || 0 },
+        { key: 'TIER_2', label: 'Tier 2', klass: 'accent-blue', count: counts.TIER_2 || 0 }
+      ]
+    },
+    tierTotal() {
+      return this.tierRows.reduce((sum, r) => sum + r.count, 0)
+    },
+    sensitivityRows() {
+      const counts = {}
+      ;(this.summary.by_sensitivity || []).forEach((r) => { counts[r.sensitivity] = r.count })
+      return [
+        { key: 'CRITICAL', label: this.$t('Critical'), klass: 'accent-red', count: counts.CRITICAL || 0 },
+        { key: 'NONCRITICAL', label: this.$t('Noncritical'), klass: 'accent-blue', count: counts.NONCRITICAL || 0 }
+      ]
+    },
+    sensitivityTotal() {
+      return this.sensitivityRows.reduce((sum, r) => sum + r.count, 0)
     }
   },
   created() {
@@ -206,7 +250,11 @@ export default {
     goCredentials(filter) {
       this.$router.push({ name: 'RepositoryCredentials', query: filter })
     },
+    barWidth(count, total) {
+      return total ? `${Math.max((count / total) * 100, count ? 4 : 0)}%` : '0%'
+    },
     categoryIcon,
+    categoryLabel,
     runSearch() {
       if (!this.searchQuery) return
       this.goCredentials({ search: this.searchQuery })
@@ -289,32 +337,86 @@ export default {
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
+.distribution-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.dist-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.dist-bar-label {
+  width: 90px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+.dist-bar-track {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--el-fill-color-light);
+  overflow: hidden;
+}
+.dist-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  background: var(--el-color-primary);
+  transition: width 0.3s ease;
+}
+.dist-bar-fill.accent-red {
+  background: var(--el-color-danger);
+}
+.dist-bar-fill.accent-orange {
+  background: var(--el-color-warning);
+}
+.dist-bar-fill.accent-blue {
+  background: var(--el-color-primary);
+}
+.dist-bar-count {
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+@media (max-width: 960px) {
+  .distribution-row {
+    grid-template-columns: 1fr;
+  }
+}
 .tech-distribution {
   margin-top: 16px;
 }
 .tech-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 8px;
 }
 .tech-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 4px;
+  padding: 5px 10px;
+  border-radius: 14px;
+  background: var(--el-fill-color-light);
   transition: background 0.15s ease;
 }
 .tech-item:hover {
-  background: var(--el-fill-color-light);
+  background: var(--el-fill-color);
 }
 .tech-icon {
-  font-size: 22px;
+  font-size: 14px;
   color: var(--el-color-primary);
 }
 .tech-count {
-  font-size: 18px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
 }

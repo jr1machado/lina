@@ -3,7 +3,8 @@
     <ListTable
       ref="collectionTable"
       :create-drawer="createDrawer"
-      :detail-drawer="createDrawer"
+      :detail-drawer="detailDrawer"
+      :update-drawer="detailDrawer"
       :header-actions="headerActions"
       :table-config="tableConfig"
       :resource="$t('Collections')"
@@ -26,6 +27,10 @@ export default {
     const vm = this
     return {
       createDrawer: () => import('./CollectionCreateUpdate.vue'),
+      // 2026-09-07, user request - clicking a collection (and its Edit
+      // action) opens the tabbed detail view: edit form + credentials
+      // that belong to it + "How to use" explainer.
+      detailDrawer: () => import('./CollectionDetail/index.vue'),
       accessDialog: false,
       accessTarget: null,
       deleteDialog: false,
@@ -46,7 +51,7 @@ export default {
             formatterArgs: {
               hasClone: false,
               hasDelete: false,
-              hasUpdate: false,
+              hasUpdate: true,
               extraActions: [
                 {
                   name: 'Access',
@@ -56,6 +61,12 @@ export default {
                     vm.accessTarget = row
                     vm.accessDialog = true
                   }
+                },
+                {
+                  name: 'ToggleStatus',
+                  title: ({ row }) => (row.status === 'DISABLED' ? this.$t('EnableCollection') : this.$t('DisableCollection')),
+                  can: this.$hasPerm('repository.manage_repositorycollection'),
+                  callback: ({ row }) => vm.toggleStatus(row)
                 },
                 {
                   name: 'Delete',
@@ -84,6 +95,12 @@ export default {
   methods: {
     reload() {
       this.$refs.collectionTable?.reloadTable?.()
+    },
+    async toggleStatus(row) {
+      const action = row.status === 'DISABLED' ? 'enable' : 'disable'
+      await this.$axios.post(`/api/v1/repository/collections/${row.id}/${action}/`)
+      this.$message.success(action === 'enable' ? this.$t('CollectionEnabled') : this.$t('CollectionDisabled'))
+      this.reload()
     }
   }
 }
