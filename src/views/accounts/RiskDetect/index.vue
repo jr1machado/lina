@@ -1,14 +1,15 @@
 <template>
+  <!-- 2026-09-08, user request - real feature (detection engine already
+       existed), was locked behind an XPack license check that's
+       permanently false outside the (absent) commercial package. -->
   <TabPage
     v-model:active-menu="config.activeMenu"
-    :disabled="!hasValidLicense"
     :submenu="config.submenu"
   />
 </template>
 
 <script>
 import { TabPage } from '@/layout/components'
-import { mapGetters } from 'vuex'
 
 export default {
   name: 'AccountCheck',
@@ -47,9 +48,6 @@ export default {
         ]
       }
     }
-  },
-  computed: {
-    ...mapGetters(['hasValidLicense'])
   }
 }
 </script>

@@ -126,6 +126,7 @@ export default {
             'identity_source',
             'dedicated_pam_account',
             'credential_check_enabled',
+            'rotation_policy',
             'rotation_interval',
             'auto_reconcile'
           ]

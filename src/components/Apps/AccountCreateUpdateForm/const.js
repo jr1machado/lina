@@ -407,8 +407,33 @@ export const accountFieldsMeta = (vm) => {
       },
       hidden: () => vm.addTemplate
     },
+    // Erro-Contas.md admin policy MVP - "this is the one place the
+    // account's rotation_policy is set" (BaseAccountSerializer.Meta
+    // comment). When set and active, it overrides rotation_interval/
+    // periodic_rotation/rotate_after_use below entirely (BaseAccount.
+    // effective_rotation_interval) - rotation_interval stays visible as
+    // the fallback used when no policy is assigned.
+    rotation_policy: {
+      component: Select2,
+      label: vm.$t('RotationPolicy'),
+      helpTip: vm.$t('RotationPolicyHelpText'),
+      el: {
+        get disabled() {
+          return vm.isDisabled
+        },
+        clearable: true,
+        ajax: {
+          url: '/api/v1/accounts/rotation-policies/?is_active=true',
+          transformOption: (item) => {
+            return { label: item.name, value: item.id }
+          }
+        }
+      },
+      hidden: (formValue) => vm.addTemplate || rawChoiceValue(formValue.password_management_mode) !== 'MANAGED'
+    },
     rotation_interval: {
       label: vm.$t('RotationInterval'),
+      helpTip: vm.$t('RotationIntervalHelpText'),
       el: {
         get disabled() {
           return vm.isDisabled

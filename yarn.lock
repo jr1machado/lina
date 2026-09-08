@@ -3249,7 +3249,7 @@ __metadata:
     pretty-bytes: "npm:^7.1.0"
     sass: "npm:^1.100.0"
     semver: "npm:^7.8.1"
-    sm-crypto: "npm:^0.4.0"
+    sm-crypto: "npm:^0.5.7"
     socket.io-client: "npm:^4.8.3"
     sortablejs: "npm:^1.15.7"
     strip-ansi: "npm:^7.2.0"
@@ -4125,12 +4125,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sm-crypto@npm:^0.4.0":
-  version: 0.4.0
-  resolution: "sm-crypto@npm:0.4.0"
+"sm-crypto@npm:^0.5.7":
+  version: 0.5.7
+  resolution: "sm-crypto@npm:0.5.7"
   dependencies:
     jsbn: "npm:^1.1.0"
-  checksum: 10c0/76210413b2af8d426403d5f0a7d52adcd85241539e5ad6445d1a3a9eb22d474dba21ae0b58ca9a68f1c76555c42d7fe6133d85c2172d69de608152d3f72ccfdd
+  checksum: 10c0/22236ebb583e4d2d0535e1e125a356ba96c8c4d98b369b6ce4816f6f044cfef4fc29aeca656c54940997513cc31949c293b27a652953579d52c6a3f877ded2dd
   languageName: node
   linkType: hard
 

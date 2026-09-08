@@ -82,6 +82,12 @@ export default {
                   can: ({ row }) => row.status === 'ACTIVE' && this.$hasPerm('repository.disable_repositoryentry'),
                   callback: ({ row }) => vm.disableEntry(row)
                 },
+                {
+                  name: 'Enable',
+                  title: this.$t('Enable'),
+                  can: ({ row }) => row.status !== 'ACTIVE' && this.$hasPerm('repository.disable_repositoryentry'),
+                  callback: ({ row }) => vm.enableEntry(row)
+                },
                 // 2026-09-06 - deletion only offered once already disabled
                 // (backend also enforces this - api/entry.py `delete`).
                 // Tier 0 gets "Request deletion" (Approver Group workflow)
@@ -141,6 +147,25 @@ export default {
     async disableEntry(row) {
       await this.$axios.post(`/api/v1/repository/entries/${row.id}/disable/`)
       this.$message.success(this.$t('CredentialDisabled'))
+      this.reload()
+    },
+    // 2026-09-07, production-readiness review - reactivation always
+    // requires fresh MFA (it's what makes the credential usable again;
+    // disable itself doesn't, since it only ever reduces exposure).
+    async enableEntry(row) {
+      let totpCode
+      try {
+        ({ value: totpCode } = await this.$prompt(this.$t('MFACodeTOTP'), this.$t('Enable'), {
+          confirmButtonText: this.$t('Enable'),
+          cancelButtonText: this.$t('Cancel'),
+          inputPattern: /^\d{6}$/,
+          inputErrorMessage: this.$t('MFACodeTOTP')
+        }))
+      } catch {
+        return
+      }
+      await this.$axios.post(`/api/v1/repository/entries/${row.id}/enable/`, { totp_code: totpCode })
+      this.$message.success(this.$t('CredentialEnabled'))
       this.reload()
     },
     // 2026-09-07 - full clone (metadata + username + password), done

@@ -9,6 +9,15 @@
         </el-tag>
         <el-tag :type="tierTagType(entry.security_tier)" size="large">{{ entry.security_tier }}</el-tag>
       </template>
+      <!-- INFO/Corrigir-01.md, user request - full audit trail per
+           credential (reveal/edit/disable/delete/...), same as PAM's
+           Account detail already has. Reuses the existing shared
+           ResourceActivity component/endpoint as-is (audits/activities/
+           ?resource_id=) - every action here already calls log_event(),
+           which writes to the same OperateLog this component reads, so
+           no backend change was needed. -->
+      <el-tabs v-model="activeTab">
+        <el-tab-pane :label="$t('Details')" name="details">
       <el-descriptions :column="2" border>
         <el-descriptions-item :label="$t('Collection')">{{ entry.collection_name }}</el-descriptions-item>
         <el-descriptions-item :label="$t('Username')">
@@ -71,13 +80,12 @@
       <div v-if="isGrouped" class="members-box">
         <div class="members-header">
           <h4>{{ $t('MemberCredentials') }} ({{ members.length }}/{{ groupedMaxMembers }})</h4>
-          <el-button
-            v-if="canManage && members.length < groupedMaxMembers"
-            type="primary" size="small"
-            @click="addMemberDialog = true"
-          >
-            {{ $t('AddMemberCredential') }}
-          </el-button>
+          <div v-if="canManage && members.length < groupedMaxMembers" class="members-header-actions">
+            <el-button type="primary" size="small" @click="addMemberDialog = true">
+              {{ $t('AddMemberCredential') }}
+            </el-button>
+            <el-button size="small" @click="importMembersDialog = true">{{ $t('ImportCSV') }}</el-button>
+          </div>
         </div>
         <el-table :data="members" size="small">
           <el-table-column prop="name" :label="$t('Name')" />
@@ -154,6 +162,9 @@
         >
           {{ $t('DisableCredential') }}
         </el-button>
+        <el-button v-else size="small" type="primary" plain @click="enableEntry">
+          {{ $t('EnableCredential') }}
+        </el-button>
         <!-- 2026-09-06 - delete only offered once disabled (backend also
              enforces this); Tier 0 gets the approval workflow instead. -->
         <el-button
@@ -171,6 +182,11 @@
           {{ $t('RequestDeletion') }}
         </el-button>
       </div>
+        </el-tab-pane>
+        <el-tab-pane :label="$t('Activity')" name="activity" lazy>
+          <ResourceActivity :object="entry" :title="$t('Activity')" />
+        </el-tab-pane>
+      </el-tabs>
     </IBox>
 
     <EntryDeleteDialog
@@ -209,6 +225,28 @@
           @click="submitAddMember"
         >
           {{ $t('Save') }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 2026-09-07, production-readiness review - bulk import via CSV -->
+    <el-dialog v-model="importMembersDialog" :title="$t('ImportCSV')" width="480px">
+      <el-alert type="info" :closable="false" show-icon :title="$t('ImportCSVHelp')" class="import-help" />
+      <el-form label-position="top">
+        <el-form-item :label="$t('CSVFile')" required>
+          <input type="file" accept=".csv,text/csv" @change="onImportFileChange" />
+        </el-form-item>
+      </el-form>
+      <div v-if="importResult" class="import-result">
+        <p>{{ $t('ImportCreatedCount', { n: importResult.created_count }) }}</p>
+        <ul v-if="importResult.errors.length" class="import-errors">
+          <li v-for="e in importResult.errors" :key="e.row">{{ $t('ImportRowError', { row: e.row, error: e.error }) }}</li>
+        </ul>
+      </div>
+      <template #footer>
+        <el-button @click="importMembersDialog = false">{{ $t('Close') }}</el-button>
+        <el-button type="primary" :loading="submitting" :disabled="!importFile" @click="submitImportMembers">
+          {{ $t('ImportCSV') }}
         </el-button>
       </template>
     </el-dialog>
@@ -363,7 +401,7 @@
 
 <script>
 import { Page } from '@/layout/components'
-import { IBox } from '@/components'
+import { IBox, ResourceActivity } from '@/components'
 import EntryDeleteDialog from './EntryDeleteDialog.vue'
 import EntryRequestDeleteDialog from './EntryRequestDeleteDialog.vue'
 import { copy } from '@/utils/common/index'
@@ -397,10 +435,11 @@ const GROUPED_MAX_MEMBERS = { GROUPED_10: 10, GROUPED_20: 20, GROUPED_30: 30 }
 
 export default {
   name: 'EntryDetail',
-  components: { Page, IBox, EntryDeleteDialog, EntryRequestDeleteDialog },
+  components: { Page, IBox, ResourceActivity, EntryDeleteDialog, EntryRequestDeleteDialog },
   data() {
     return {
       loading: true,
+      activeTab: 'details',
       entry: null,
       pendingRequest: null,
       approvedGrant: null, // the latest APPROVED request for this entry/user, if any
@@ -423,6 +462,9 @@ export default {
       members: [],
       addMemberDialog: false,
       memberForm: { name: '', username: '', ip_hostname: '', owner: '', notes: '', password: '' },
+      importMembersDialog: false,
+      importFile: null,
+      importResult: null,
       revealMemberDialog: false,
       revealMemberTotp: '',
       revealMemberTarget: null,
@@ -553,6 +595,23 @@ export default {
         this.$message.success(this.$t('MemberAdded'))
         this.addMemberDialog = false
         this.memberForm = { name: '', username: '', ip_hostname: '', owner: '', notes: '', password: '' }
+        await this.loadMembers()
+      } finally {
+        this.submitting = false
+      }
+    },
+    onImportFileChange(event) {
+      this.importFile = event.target.files[0] || null
+      this.importResult = null
+    },
+    async submitImportMembers() {
+      this.submitting = true
+      try {
+        const form = new FormData()
+        form.append('file', this.importFile)
+        const data = await this.$axios.post(`/api/v1/repository/entries/${this.entry.id}/members/import/`, form)
+        this.importResult = data
+        if (data.created_count) this.$message.success(this.$t('ImportCreatedCount', { n: data.created_count }))
         await this.loadMembers()
       } finally {
         this.submitting = false
@@ -745,6 +804,25 @@ export default {
       const data = await this.$axios.post(`/api/v1/repository/entries/${this.entry.id}/clone/`)
       this.$message.success(this.$t('CredentialCloned'))
       this.$router.push({ name: 'RepositoryCredentialDetail', params: { id: data.id } })
+    },
+    // 2026-09-07, production-readiness review - reactivation always
+    // requires fresh MFA (disable itself doesn't - it only reduces
+    // exposure; enabling is what makes the credential usable again).
+    async enableEntry() {
+      let totpCode
+      try {
+        ({ value: totpCode } = await this.$prompt(this.$t('MFACodeTOTP'), this.$t('EnableCredential'), {
+          confirmButtonText: this.$t('EnableCredential'),
+          cancelButtonText: this.$t('Cancel'),
+          inputPattern: /^\d{6}$/,
+          inputErrorMessage: this.$t('MFACodeTOTP')
+        }))
+      } catch {
+        return
+      }
+      const data = await this.$axios.post(`/api/v1/repository/entries/${this.entry.id}/enable/`, { totp_code: totpCode })
+      this.entry = { ...this.entry, ...data }
+      this.$message.success(this.$t('CredentialEnabled'))
     }
   }
 }
@@ -826,6 +904,22 @@ export default {
 }
 .members-header h4 {
   margin: 0;
+}
+.members-header-actions {
+  display: flex;
+  gap: 8px;
+}
+.import-help {
+  margin-bottom: 12px;
+}
+.import-result {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.import-errors {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--el-color-danger);
 }
 .secret-box {
   margin-top: 16px;
