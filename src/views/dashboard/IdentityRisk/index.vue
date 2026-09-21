@@ -64,6 +64,40 @@
             </div>
             <el-table v-loading="loadingTable" :data="tableRows" size="small" max-height="480">
               <template v-if="activeFilter.mode === 'findings'">
+                <el-table-column type="expand">
+                  <template #default="{ row }">
+                    <div class="finding-detail">
+                      <div v-if="row.metadata && row.metadata.account_name" class="finding-detail-row">
+                        <strong>{{ $t('Credential') }}:</strong> {{ row.metadata.account_name }}
+                      </div>
+                      <template v-if="row.metadata && row.metadata.remediation">
+                        <div class="finding-detail-row">
+                          <strong>{{ $t('Error code') }}:</strong>
+                          <code>{{ row.metadata.error_code }}</code>
+                          <span v-if="row.metadata.trigger"> ({{ row.metadata.trigger }})</span>
+                        </div>
+                        <div class="finding-detail-row">
+                          <strong>{{ $t('Likely cause') }}:</strong> {{ row.metadata.remediation.causa }}
+                        </div>
+                        <div class="finding-detail-row">
+                          <strong>{{ $t('Fix') }}:</strong> {{ row.metadata.remediation.correcao }}
+                        </div>
+                        <div v-if="row.metadata.remediation.script" class="finding-detail-row">
+                          <strong>{{ $t('Script') }}:</strong>
+                          <pre class="finding-detail-script">{{ row.metadata.remediation.script }}</pre>
+                          <el-button size="small" @click="copyScript(row.metadata.remediation.script)">
+                            {{ $t('Copy') }}
+                          </el-button>
+                        </div>
+                      </template>
+                      <template v-else-if="row.metadata">
+                        <div v-for="(value, key) in row.metadata" :key="key" class="finding-detail-row">
+                          <strong>{{ key }}:</strong> {{ value }}
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </el-table-column>
                 <el-table-column prop="entity_id" :label="$t('Entity')" width="280" />
                 <el-table-column prop="severity" :label="$t('Severity')" width="120" />
                 <el-table-column prop="status" :label="$t('Status')" width="120" />
@@ -229,6 +263,11 @@ export default {
     clearFilter() {
       this.activeFilter = null
       this.tableRows = []
+    },
+    copyScript(script) {
+      navigator.clipboard.writeText(script).then(() => {
+        this.$message.success(this.$t('Copied'))
+      })
     }
   }
 }
@@ -313,5 +352,21 @@ export default {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 8px;
+}
+.finding-detail {
+  padding: 8px 24px;
+}
+.finding-detail-row {
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.finding-detail-script {
+  white-space: pre-wrap;
+  background: var(--color-disabled-background, #f5f7fa);
+  border: 1px solid var(--color-border, #e9ecef);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 12px;
+  margin: 4px 0;
 }
 </style>
