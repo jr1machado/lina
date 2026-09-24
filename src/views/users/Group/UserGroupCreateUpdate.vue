@@ -17,7 +17,7 @@ export default {
         },
         url: '/api/v1/users/groups/',
         fields: [
-          [this.$t('Basic'), ['name', 'users']],
+          [this.$t('Basic'), ['name', 'module_scope', 'users']],
           [this.$t('Other'), ['comment']]
         ],
         fieldsMeta: {

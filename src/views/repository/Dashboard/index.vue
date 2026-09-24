@@ -92,7 +92,17 @@
             <el-tab-pane :label="$t('Favorites')" name="favorites" />
             <el-tab-pane :label="$t('Recent')" name="recent" />
           </el-tabs>
-          <EntryTable :key="quickTab" :extra-query="quickQuery" />
+          <!-- Sprint_38-Cofre-Senhas-Melhoria.md section 17/81 - two
+               different meanings of "recent": entries THIS user opened
+               (default, per-user), or entries recently changed by anyone
+               (generic date_updated). -->
+          <div v-if="quickTab === 'recent'" class="recent-sort-row">
+            <el-radio-group v-model="recentSort" size="small">
+              <el-radio-button value="my_access">{{ $t('MyRecentAccess') }}</el-radio-button>
+              <el-radio-button value="date_updated">{{ $t('RecentlyUpdated') }}</el-radio-button>
+            </el-radio-group>
+          </div>
+          <EntryTable :key="`${quickTab}-${recentSort}`" :extra-query="quickQuery" />
         </IBox>
       </div>
 
@@ -205,6 +215,7 @@ export default {
       summary: {},
       categories: [],
       quickTab: 'favorites',
+      recentSort: 'my_access',
       searchQuery: ''
     }
   },
@@ -212,7 +223,8 @@ export default {
     quickQuery() {
       // ORDERING_PARAM is "order", not DRF's default "ordering" (see
       // jumpserver/settings/libs.py DEFAULT_FILTER_BACKENDS).
-      return this.quickTab === 'favorites' ? { favorites: 'true' } : { order: '-date_updated' }
+      if (this.quickTab === 'favorites') return { favorites: 'true' }
+      return this.recentSort === 'my_access' ? { recent: 'true' } : { order: '-date_updated' }
     },
     tierRows() {
       const counts = {}
@@ -264,6 +276,11 @@ export default {
 </script>
 
 <style scoped>
+.recent-sort-row {
+  margin: 8px 0 4px;
+  display: flex;
+  justify-content: flex-end;
+}
 .dashboard-header {
   margin-bottom: 12px;
 }

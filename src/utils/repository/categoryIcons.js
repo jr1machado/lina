@@ -12,7 +12,8 @@ export const CATEGORY_ICONS = {
   APPLICATION_CREDENTIAL: 'Grid',
   DATABASE_CREDENTIAL: 'Coin',
   CERTIFICATE: 'DocumentChecked',
-  SSH_KEY: 'Cpu'
+  SSH_KEY: 'Cpu',
+  TOTP_SECRET: 'Timer'
 }
 
 export function categoryIcon(category) {
@@ -32,6 +33,9 @@ export const CATEGORY_LABELS = {
   DATABASE_CREDENTIAL: 'Database Credential',
   CERTIFICATE: 'Certificate',
   SSH_KEY: 'SSH Key',
+  // Sprint_39-TOTP-Seed.md section 4 - "TOTP Authenticator" in the UI,
+  // never the more technical enum name.
+  TOTP_SECRET: 'TOTP Authenticator',
   GROUPED_10: 'Grouped Record (10x1)',
   GROUPED_20: 'Grouped Record (20x1)',
   GROUPED_30: 'Grouped Record (30x1)'

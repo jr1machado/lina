@@ -108,6 +108,60 @@
         </el-table>
       </div>
 
+      <!-- Sprint_39-TOTP-Seed.md section 34-37/45/55 - the seed itself has
+           no reveal path at all (section 28); this box only ever shows a
+           freshly-generated code, on the same request/approval/MFA flow
+           as reveal above (mirrors _reveal_via_grant/_reveal_direct
+           server-side, see api/entry.py's `generate` action). -->
+      <div v-else-if="entry.category === 'TOTP_SECRET'" class="secret-box">
+        <div class="property-row">
+          <span class="property-label">{{ $t('TOTPCode') }}</span>
+          <span v-if="totpCode" class="property-value secret-value totp-code">{{ formatTotpCode(totpCode.code) }}</span>
+          <span v-else class="property-value secret-value">••• •••</span>
+          <template v-if="!totpCode">
+            <el-icon
+              v-if="!entry.protected_credential || approvedGrant"
+              class="field-action" :title="$t('GenerateCode')"
+              @click="totpGenerateDialog = true"
+            >
+              <Refresh />
+            </el-icon>
+            <el-icon v-else class="field-action" :title="$t('RequestAccess')" @click="requestDialog = true">
+              <Refresh />
+            </el-icon>
+          </template>
+          <el-icon v-if="totpCode" class="field-action" :title="$t('Copy')" @click="doCopyTotp"><CopyDocument /></el-icon>
+        </div>
+        <template v-if="totpCode">
+          <span v-if="totpCountdown > 5" class="secret-ttl">{{ $t('ExpiresIn') }}: {{ totpCountdown }}s</span>
+          <span v-else class="secret-ttl">{{ $t('NewCodeInMoments') }}</span>
+        </template>
+
+        <div v-if="recoveryStatus" class="recovery-summary">
+          <h4>{{ $t('RecoveryCodes') }}</h4>
+          <p>
+            {{ $t('RecoveryCodesAvailable', { n: recoveryStatus.available }) }} ·
+            {{ $t('RecoveryCodesUsed', { n: recoveryStatus.used }) }}
+          </p>
+          <div class="manage-actions">
+            <el-button
+              v-if="recoveryStatus.available"
+              size="small"
+              @click="entry.protected_credential && !approvedGrant ? (requestDialog = true) : (recoveryUseDialog = true)"
+            >
+              {{ $t('UseRecoveryCode') }}
+            </el-button>
+            <el-button v-if="canManage" size="small" @click="recoveryImportDialog = true">{{ $t('ImportRecoveryCodes') }}</el-button>
+            <el-button
+              v-if="canManage && recoveryStatus.available" size="small"
+              @click="openOfflineExport"
+            >
+              {{ $t('OfflineExport') }}
+            </el-button>
+          </div>
+        </div>
+      </div>
+
       <div v-else class="secret-box">
         <!-- 2026-09-07, user request - same eye/copy icon pattern the PAM
              module already uses for account secrets. The underlying
@@ -150,7 +204,17 @@
 
       <div v-if="canManage" class="manage-actions">
         <el-button size="small" @click="openEdit">{{ $t('EditMetadata') }}</el-button>
-        <el-button v-if="canSetSecret" size="small" @click="openSetSecret">{{ $t('ChangeSecret') }}</el-button>
+        <el-button v-if="canSetSecret" size="small" @click="openSetSecret">
+          {{ entry.category === 'TOTP_SECRET' ? $t('ReplaceTOTPConfig') : $t('ChangeSecret') }}
+        </el-button>
+        <!-- Sprint_39-B-TOTP-Seed-Export.md section 43-44 - visible only
+             to a user holding totp.seed.export.request. -->
+        <el-button
+          v-if="entry.category === 'TOTP_SECRET' && $hasPerm('repository.add_totpseedexportrequest')"
+          size="small" @click="openSeedExport"
+        >
+          {{ $t('ExportTOTPConfig') }}
+        </el-button>
         <el-button size="small" @click="openChangeClassification">{{ $t('ChangeClassification') }}</el-button>
         <el-button v-if="$hasPerm('repository.add_repositoryentry')" size="small" @click="cloneEntry">{{ $t('Clone') }}</el-button>
         <el-button
@@ -295,6 +359,129 @@
       </template>
     </el-dialog>
 
+    <!-- Sprint_39-TOTP-Seed.md section 41/45 - same fresh-MFA-per-generate
+         rule as reveal above; the seed itself never appears in this dialog. -->
+    <el-dialog v-model="totpGenerateDialog" :title="$t('GenerateCode')" width="380px">
+      <el-form label-position="top">
+        <el-form-item :label="$t('MFACodeTOTP')" required>
+          <el-input v-model="totpGenerateMfa" maxlength="6" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="totpGenerateDialog = false">{{ $t('Cancel') }}</el-button>
+        <el-button type="primary" :loading="submitting" @click="doGenerateTotp">{{ $t('GenerateCode') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- section 19-20 - one code revealed at a time, more sensitive than
+         the OTP itself (valid until used/revoked), so it always asks for
+         a reason on the direct (Tier 2) path, same MFA/approval-grant
+         boundary otherwise. -->
+    <el-dialog v-model="recoveryUseDialog" :title="$t('UseRecoveryCode')" width="380px">
+      <el-form label-position="top">
+        <template v-if="!entry.protected_credential">
+          <el-form-item :label="$t('Reason')" required>
+            <el-input v-model="recoveryUseForm.reason" type="textarea" :rows="2" />
+          </el-form-item>
+          <el-form-item :label="$t('MFACodeTOTP')" required>
+            <el-input v-model="recoveryUseForm.totp_code" maxlength="6" />
+          </el-form-item>
+        </template>
+      </el-form>
+      <template v-if="usedRecoveryCode" #default>
+        <p class="secret-value">{{ usedRecoveryCode }}</p>
+      </template>
+      <template #footer>
+        <el-button @click="recoveryUseDialog = false">{{ $t('Close') }}</el-button>
+        <el-button
+          v-if="!usedRecoveryCode" type="primary" :loading="submitting"
+          @click="submitUseRecoveryCode"
+        >
+          {{ $t('UseRecoveryCode') }}
+        </el-button>
+        <el-button v-else type="primary" @click="copyValue(usedRecoveryCode)">{{ $t('Copy') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- section 16-18 - never generated by Hash Access, imported as-is. -->
+    <el-dialog v-model="recoveryImportDialog" :title="$t('ImportRecoveryCodes')" width="440px">
+      <el-alert type="info" :closable="false" show-icon :title="$t('RecoveryCodesHelp')" class="legacy-alert" />
+      <el-form label-position="top">
+        <el-form-item :label="$t('RecoveryCodes')" required>
+          <el-input v-model="recoveryImportText" type="textarea" :rows="4" :placeholder="'A832-91FF\n7BC2-117A'" />
+        </el-form-item>
+        <template v-if="entry.protected_credential">
+          <el-form-item :label="$t('Reason')" required>
+            <el-input v-model="recoveryImportForm.reason" type="textarea" :rows="2" />
+          </el-form-item>
+          <el-form-item :label="$t('MFACodeTOTP')" required>
+            <el-input v-model="recoveryImportForm.totp_code" maxlength="6" />
+          </el-form-item>
+        </template>
+      </el-form>
+      <template #footer>
+        <el-button @click="recoveryImportDialog = false">{{ $t('Cancel') }}</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitImportRecoveryCodes">{{ $t('Save') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- section 21-24 - explicit, controlled, never automatic download. -->
+    <el-dialog v-model="offlineExportDialog" :title="$t('OfflineExport')" width="440px">
+      <el-radio-group v-model="offlineExportForm.mode" class="offline-export-modes">
+        <el-radio value="keep_in_vault">{{ $t('KeepInVaultOption') }}</el-radio>
+        <el-radio value="offline_only">{{ $t('OfflineOnlyOption') }}</el-radio>
+      </el-radio-group>
+      <el-alert
+        v-if="offlineExportForm.mode === 'offline_only'" type="warning" :closable="false" show-icon
+        :title="$t('OfflineExportWarning')" class="legacy-alert"
+      />
+      <el-form label-position="top">
+        <el-form-item v-if="offlineExportForm.mode === 'offline_only'">
+          <el-checkbox v-model="offlineExportForm.confirm">{{ $t('OfflineExportConfirm') }}</el-checkbox>
+        </el-form-item>
+        <el-form-item :label="$t('MFACodeTOTP')" required>
+          <el-input v-model="offlineExportForm.totp_code" maxlength="6" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="offlineExportDialog = false">{{ $t('Cancel') }}</el-button>
+        <el-button
+          type="primary" :loading="submitting"
+          :disabled="offlineExportForm.mode === 'offline_only' && !offlineExportForm.confirm"
+          @click="submitOfflineExport"
+        >
+          {{ $t('OfflineExport') }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Sprint_39-B-TOTP-Seed-Export.md section 45-46/601-604 - request
+         only; never shows the seed, and dual-control approval happens on
+         the request's own page after this. -->
+    <el-dialog v-model="seedExportDialog" :title="$t('ExportTOTPConfig')" width="440px">
+      <el-alert type="warning" :closable="false" show-icon :title="$t('SeedExportRequestHelp')" class="legacy-alert" />
+      <el-form label-position="top">
+        <el-form-item :label="$t('Format')" required>
+          <el-select v-model="seedExportForm.export_format" style="width: 100%">
+            <el-option label="Base32" value="BASE32" />
+            <el-option label="otpauth URI" value="OTPAUTH_URI" />
+            <el-option label="QR Code" value="QR" />
+            <el-option :label="$t('EncryptedOfflinePackage')" value="ENCRYPTED_OFFLINE_PACKAGE" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="$t('Reason')" required>
+          <el-input v-model="seedExportForm.reason" type="textarea" :rows="2" />
+        </el-form-item>
+        <el-form-item :label="$t('MFACodeTOTP')" required>
+          <el-input v-model="seedExportForm.totp_code" maxlength="6" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="seedExportDialog = false">{{ $t('Cancel') }}</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitSeedExportRequest">{{ $t('RequestExport') }}</el-button>
+      </template>
+    </el-dialog>
+
     <!-- S37 section 71/12 - metadata only, never security_tier/secret (each has its own dialog/guard) -->
     <el-dialog v-model="editDialog" :title="$t('EditMetadata')" width="480px">
       <el-form label-position="top">
@@ -327,12 +514,20 @@
     </el-dialog>
 
     <!-- S37 section 62-63 / S38 section 68-70 - previous secret never needs to be revealed to set a new one -->
-    <el-dialog v-model="setSecretDialog" :title="$t('ChangeSecret')" width="420px">
+    <el-dialog
+      v-model="setSecretDialog"
+      :title="entry.category === 'TOTP_SECRET' ? $t('ReplaceTOTPConfig') : $t('ChangeSecret')"
+      width="420px"
+    >
+      <el-alert
+        v-if="entry.category === 'TOTP_SECRET'" type="info" :closable="false" show-icon
+        :title="$t('ReplaceTOTPConfigHelp')" class="legacy-alert"
+      />
       <el-form label-position="top">
-        <el-form-item :label="$t('NewPassword')" required>
+        <el-form-item :label="entry.category === 'TOTP_SECRET' ? $t('SecretTOTP') : $t('NewPassword')" required>
           <el-input v-model="setSecretForm.password" type="password" show-password />
         </el-form-item>
-        <el-form-item :label="$t('ConfirmNewPassword')" required>
+        <el-form-item :label="entry.category === 'TOTP_SECRET' ? $t('SecretTOTP') : $t('ConfirmNewPassword')" required>
           <el-input v-model="setSecretForm.confirm" type="password" show-password />
         </el-form-item>
         <template v-if="entry.protected_credential">
@@ -469,7 +664,24 @@ export default {
       revealMemberTotp: '',
       revealMemberTarget: null,
       revealedMemberId: null,
-      revealedMemberPassword: ''
+      revealedMemberPassword: '',
+      // -- TOTP Secret (Sprint_39-TOTP-Seed.md sections 34-41/16-24) -------
+      totpCode: null,
+      totpCountdown: 0,
+      totpTimer: null,
+      totpGenerateDialog: false,
+      totpGenerateMfa: '',
+      recoveryStatus: null,
+      recoveryUseDialog: false,
+      recoveryUseForm: { reason: '', totp_code: '' },
+      usedRecoveryCode: '',
+      recoveryImportDialog: false,
+      recoveryImportText: '',
+      recoveryImportForm: { reason: '', totp_code: '' },
+      offlineExportDialog: false,
+      offlineExportForm: { mode: 'keep_in_vault', confirm: false, totp_code: '' },
+      seedExportDialog: false,
+      seedExportForm: { export_format: 'BASE32', reason: '', totp_code: '' }
     }
   },
   computed: {
@@ -547,6 +759,7 @@ export default {
   },
   beforeUnmount() {
     clearInterval(this.timer)
+    clearInterval(this.totpTimer)
   },
   methods: {
     tierTagType(tier) {
@@ -557,6 +770,9 @@ export default {
     },
     categoryLabelOf(c) {
       return categoryLabel(c)
+    },
+    formatTotpCode(code) {
+      return code && code.length > 4 ? `${code.slice(0, Math.ceil(code.length / 2))} ${code.slice(Math.ceil(code.length / 2))}` : code
     },
     // best-effort clickable link: real URLs as-is, IP/hostname-shaped
     // fields get an assumed http:// prefix (opens the device's own web
@@ -577,6 +793,9 @@ export default {
         }
         if (this.isGrouped) {
           await this.loadMembers()
+        }
+        if (this.entry.category === 'TOTP_SECRET') {
+          await this.loadRecoveryStatus()
         }
         // 2026-09-06 - list's Edit button links here with ?edit=1 so it
         // opens straight into the existing edit dialog, no second form.
@@ -823,6 +1042,120 @@ export default {
       const data = await this.$axios.post(`/api/v1/repository/entries/${this.entry.id}/enable/`, { totp_code: totpCode })
       this.entry = { ...this.entry, ...data }
       this.$message.success(this.$t('CredentialEnabled'))
+    },
+    // -- TOTP Secret (Sprint_39-TOTP-Seed.md sections 34-41) ---------------
+    async doGenerateTotp() {
+      this.submitting = true
+      try {
+        const payload = this.entry.protected_credential
+          ? { request: this.approvedGrant.id }
+          : { totp_code: this.totpGenerateMfa }
+        const data = await this.$axios.post(`/api/v1/repository/entries/${this.entry.id}/generate/`, payload)
+        this.totpCode = data
+        this.totpGenerateDialog = false
+        this.totpGenerateMfa = ''
+        this.totpCountdown = data.seconds_remaining
+        clearInterval(this.totpTimer)
+        this.totpTimer = setInterval(() => {
+          this.totpCountdown -= 1
+          if (this.totpCountdown <= 0) {
+            clearInterval(this.totpTimer)
+            this.totpCode = null // section 35 - never re-shown once the window passes
+            this.approvedGrant = null // one-time grant, consumed server-side
+          }
+        }, 1000)
+      } finally {
+        this.submitting = false
+      }
+    },
+    async doCopyTotp() {
+      if (!this.totpCode) return
+      await navigator.clipboard.writeText(this.totpCode.code)
+      await this.$axios.post(`/api/v1/repository/entries/${this.entry.id}/copy/`)
+      // section 36 - never include the OTP itself in the toast.
+      this.$message.success(this.$t('CopiedToClipboard'))
+    },
+    async loadRecoveryStatus() {
+      this.recoveryStatus = await this.$axios.get(`/api/v1/repository/entries/${this.entry.id}/recovery-status/`)
+    },
+    async submitUseRecoveryCode() {
+      this.submitting = true
+      try {
+        const payload = this.entry.protected_credential
+          ? { request: this.approvedGrant.id }
+          : this.recoveryUseForm
+        const data = await this.$axios.post(`/api/v1/repository/entries/${this.entry.id}/recovery-codes/use/`, payload)
+        this.usedRecoveryCode = data.code
+        this.approvedGrant = null
+        await this.loadRecoveryStatus()
+      } finally {
+        this.submitting = false
+      }
+    },
+    async submitImportRecoveryCodes() {
+      const codes = this.recoveryImportText.split('\n').map((s) => s.trim()).filter(Boolean)
+      if (!codes.length) {
+        this.$message.error(this.$t('RecoveryCodesRequired'))
+        return
+      }
+      this.submitting = true
+      try {
+        this.recoveryStatus = await this.$axios.post(
+          `/api/v1/repository/entries/${this.entry.id}/recovery-codes/`,
+          { codes, ...this.recoveryImportForm }
+        )
+        this.recoveryImportDialog = false
+        this.recoveryImportText = ''
+        this.recoveryImportForm = { reason: '', totp_code: '' }
+        this.$message.success(this.$t('SavedSuccessfully'))
+      } finally {
+        this.submitting = false
+      }
+    },
+    openSeedExport() {
+      this.seedExportForm = { export_format: 'BASE32', reason: '', totp_code: '' }
+      this.seedExportDialog = true
+    },
+    async submitSeedExportRequest() {
+      this.submitting = true
+      try {
+        const req = await this.$axios.post(
+          `/api/v1/repository/entries/${this.entry.id}/seed-export-requests/`, this.seedExportForm
+        )
+        this.seedExportDialog = false
+        this.$message.success(this.$t('SeedExportRequestCreated'))
+        this.$router.push({ name: 'RepositorySeedExportDetail', params: { id: req.id } })
+      } finally {
+        this.submitting = false
+      }
+    },
+    openOfflineExport() {
+      this.offlineExportForm = { mode: 'keep_in_vault', confirm: false, totp_code: '' }
+      this.offlineExportDialog = true
+    },
+    // section 21-24 - explicit, controlled, never automatic; downloads a
+    // .txt the browser saves through its normal download flow (still a
+    // deliberate user click, never triggered on page load/generate).
+    async submitOfflineExport() {
+      this.submitting = true
+      try {
+        const response = await this.$axios.post(
+          `/api/v1/repository/entries/${this.entry.id}/recovery-codes/offline-export/`,
+          this.offlineExportForm,
+          { responseType: 'blob' }
+        )
+        const blob = response instanceof Blob ? response : new Blob([response], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${this.entry.name}-recovery-codes.txt`
+        link.click()
+        URL.revokeObjectURL(url)
+        this.offlineExportDialog = false
+        if (this.offlineExportForm.mode === 'offline_only') await this.loadRecoveryStatus()
+      } finally {
+        this.submitting = false
+      }
     }
   }
 }

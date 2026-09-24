@@ -227,6 +227,131 @@
           </el-form-item>
         </template>
 
+        <!-- Sprint_39-TOTP-Seed.md sections 6-14/73-74 - progressive
+             disclosure via three import tabs (never all three forms at
+             once, section 7), then a mandatory validate-before-save step
+             (section 14) so an incorrect seed is never stored. -->
+        <template v-else-if="form.category === 'TOTP_SECRET'">
+          <el-form-item :label="$t('TOTPIssuer')">
+            <el-input v-model="form.category_fields.issuer" placeholder="FortiGate" />
+          </el-form-item>
+          <el-form-item :label="$t('TOTPAccount')">
+            <el-input v-model="form.category_fields.account_name" placeholder="admin" />
+          </el-form-item>
+
+          <el-tabs v-model="totpImportMethod" @tab-change="resetTotpValidation">
+            <el-tab-pane :label="$t('QRCode')" name="qr">
+              <el-alert type="info" :closable="false" show-icon :title="$t('QRImageNotStored')" class="legacy-alert" />
+              <div
+                class="qr-dropzone"
+                @dragover.prevent
+                @drop.prevent="onQrDrop"
+                @click="$refs.qrFileInput.click()"
+              >
+                <template v-if="qrDecoded">{{ $t('QRCodeDetected') }} ✓</template>
+                <template v-else>{{ $t('DragOrSelectImage') }}</template>
+              </div>
+              <input
+                ref="qrFileInput" type="file" accept="image/png,image/jpeg,image/webp"
+                style="display: none" @change="onQrFileChange"
+              >
+              <el-alert
+                v-if="!barcodeDetectorSupported" type="warning" :closable="false" show-icon
+                :title="$t('QRBrowserUnsupported')" class="legacy-alert"
+              />
+            </el-tab-pane>
+            <el-tab-pane :label="$t('SecretTab')" name="secret">
+              <el-form-item :label="$t('SecretTOTP')">
+                <el-input
+                  v-model="totpSecretInput" placeholder="JBSWY3DPEHPK3PXP"
+                  @input="onTotpSecretInputChange"
+                />
+              </el-form-item>
+            </el-tab-pane>
+            <el-tab-pane :label="$t('URITab')" name="uri">
+              <el-form-item :label="$t('URIOtpauth')">
+                <el-input
+                  v-model="totpUriInput" type="textarea" :rows="2"
+                  placeholder="otpauth://totp/FortiGate:admin?secret=XXXXX"
+                />
+              </el-form-item>
+              <el-button size="small" :loading="submitting" @click="parseTotpUri">{{ $t('Continue') }}</el-button>
+            </el-tab-pane>
+          </el-tabs>
+
+          <div v-if="form.password" class="totp-preview">
+            <h4>{{ $t('TOTPIdentified') }}</h4>
+            <dl class="summary-list">
+              <div class="summary-row">
+                <dt>{{ $t('Algorithm') }}</dt>
+                <dd>{{ form.category_fields.algorithm }}</dd>
+              </div>
+              <div class="summary-row">
+                <dt>{{ $t('Digits') }}</dt>
+                <dd>{{ form.category_fields.digits }}</dd>
+              </div>
+              <div class="summary-row">
+                <dt>{{ $t('Period') }}</dt>
+                <dd>{{ form.category_fields.period }} {{ $t('Seconds') }}</dd>
+              </div>
+            </dl>
+            <el-row :gutter="12">
+              <el-col :span="8">
+                <el-form-item :label="$t('Algorithm')">
+                  <el-select
+                    v-model="form.category_fields.algorithm" style="width: 100%"
+                    @change="resetTotpValidation"
+                  >
+                    <el-option v-for="a in ['SHA1', 'SHA256', 'SHA512']" :key="a" :label="a" :value="a" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item :label="$t('Digits')">
+                  <el-select v-model="form.category_fields.digits" style="width: 100%" @change="resetTotpValidation">
+                    <el-option :label="6" :value="6" />
+                    <el-option :label="8" :value="8" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item :label="$t('Period')">
+                  <el-select v-model="form.category_fields.period" style="width: 100%" @change="resetTotpValidation">
+                    <el-option :label="30" :value="30" />
+                    <el-option :label="60" :value="60" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <!-- section 14-15 - validation code is never persisted/logged,
+                 only sent once to the stateless /totp/validate/ endpoint. -->
+            <el-form-item :label="$t('ValidateConfiguration')">
+              <el-input v-model="totpValidationCode" maxlength="8" style="width: 160px" />
+              <el-button
+                size="small" style="margin-left: 8px" :loading="submitting"
+                @click="validateTotpConfig"
+              >
+                {{ $t('Validated') }}
+              </el-button>
+              <el-tag v-if="totpValidated" type="success" size="small" style="margin-left: 8px">
+                {{ $t('Validated') }}
+              </el-tag>
+            </el-form-item>
+          </div>
+
+          <!-- section 16-17 - optional, never generated by Hash Access. -->
+          <el-collapse class="advanced-collapse">
+            <el-collapse-item :title="$t('RecoveryCodes')" name="recovery">
+              <el-alert type="info" :closable="false" show-icon :title="$t('RecoveryCodesHelp')" class="legacy-alert" />
+              <el-input
+                v-model="totpRecoveryCodesText" type="textarea" :rows="4"
+                :placeholder="'A832-91FF\n7BC2-117A'"
+              />
+            </el-collapse-item>
+          </el-collapse>
+        </template>
+
         <template v-else-if="isGrouped">
           <el-alert type="info" :closable="false" show-icon :title="$t('GroupedRecordNotice', { max: groupedMaxMembers })" />
         </template>
@@ -343,7 +468,7 @@ import { categoryIcon, categoryLabel } from '@/utils/repository/categoryIcons'
 const CATEGORIES = [
   'GENERIC_CREDENTIAL', 'SERVER_MANAGEMENT', 'NETWORK_CREDENTIAL', 'SNMP',
   'API_CREDENTIAL', 'SOFTWARE_LICENSE', 'APPLICATION_CREDENTIAL', 'DATABASE_CREDENTIAL',
-  'CERTIFICATE', 'SSH_KEY', 'GROUPED_10', 'GROUPED_20', 'GROUPED_30'
+  'CERTIFICATE', 'SSH_KEY', 'TOTP_SECRET', 'GROUPED_10', 'GROUPED_20', 'GROUPED_30'
 ]
 const GROUPED_MAX_MEMBERS = { GROUPED_10: 10, GROUPED_20: 20, GROUPED_30: 30 }
 
@@ -362,7 +487,19 @@ export default {
         collection: '', category: 'GENERIC_CREDENTIAL', manufacturer: '', product: '',
         category_fields: {}, tags: [], security_tier: 'TIER_2', sensitivity: 'NONCRITICAL',
         break_glass: false, owner: ''
-      }
+      },
+      // -- TOTP Secret (Sprint_39-TOTP-Seed.md sections 6-17) - transient
+      // wizard-local state, never part of `form` submitted directly (the
+      // seed lands in form.password, params in form.category_fields, same
+      // as every other category above).
+      totpImportMethod: 'qr',
+      totpSecretInput: '',
+      totpUriInput: '',
+      totpValidationCode: '',
+      totpValidated: false,
+      totpRecoveryCodesText: '',
+      qrDecoded: false,
+      barcodeDetectorSupported: typeof window !== 'undefined' && 'BarcodeDetector' in window
     }
   },
   computed: {
@@ -392,6 +529,11 @@ export default {
   watch: {
     tierForcesCritical(val) {
       if (val) this.form.sensitivity = 'CRITICAL'
+    },
+    'form.category'(val) {
+      if (val === 'TOTP_SECRET' && !this.form.category_fields.algorithm) {
+        this.form.category_fields = { algorithm: 'SHA1', digits: 6, period: 30, issuer: '', account_name: '' }
+      }
     }
   },
   created() {
@@ -403,6 +545,86 @@ export default {
     },
     categoryLabelOf(c) {
       return categoryLabel(c)
+    },
+    // -- TOTP Secret (Sprint_39-TOTP-Seed.md sections 8-15) ---------------
+    resetTotpValidation() {
+      // section 14 - any change to the seed/algorithm/digits/period
+      // invalidates a prior "Validated" confirmation.
+      this.totpValidated = false
+    },
+    onTotpSecretInputChange(value) {
+      // section 10 - strip whitespace/formatting only, never silently
+      // alter other characters.
+      this.form.password = value.replace(/\s+/g, '').toUpperCase()
+      this.resetTotpValidation()
+    },
+    onQrDrop(event) {
+      const file = event.dataTransfer?.files?.[0]
+      if (file) this.decodeQrFile(file)
+    },
+    onQrFileChange(event) {
+      const file = event.target.files?.[0]
+      if (file) this.decodeQrFile(file)
+      event.target.value = ''
+    },
+    // section 8/77-78 - decoded entirely in the browser (BarcodeDetector,
+    // native platform feature - no new dependency for this); the image
+    // itself is never uploaded and never leaves this function.
+    async decodeQrFile(file) {
+      if (!this.barcodeDetectorSupported) {
+        this.$message.error(this.$t('QRBrowserUnsupported'))
+        return
+      }
+      try {
+        // eslint-disable-next-line no-undef
+        const detector = new BarcodeDetector({ formats: ['qr_code'] })
+        const bitmap = await createImageBitmap(file)
+        const results = await detector.detect(bitmap)
+        const uri = results[0]?.rawValue
+        if (!uri) {
+          this.$message.error(this.$t('QRParseError'))
+          return
+        }
+        this.qrDecoded = true
+        this.totpUriInput = uri
+        await this.parseTotpUri()
+      } catch {
+        this.$message.error(this.$t('QRParseError'))
+      }
+    },
+    async parseTotpUri() {
+      if (!this.totpUriInput) return
+      this.submitting = true
+      try {
+        const data = await this.$axios.post('/api/v1/repository/entries/totp/parse-uri/', { uri: this.totpUriInput })
+        this.form.category_fields.issuer = data.issuer || this.form.category_fields.issuer
+        this.form.category_fields.account_name = data.account_name || this.form.category_fields.account_name
+        this.form.category_fields.algorithm = data.algorithm
+        this.form.category_fields.digits = data.digits
+        this.form.category_fields.period = data.period
+        // section 12 - preview only, the parsed secret is never re-displayed;
+        // it goes straight into form.password same as the Secret tab.
+        this.totpSecretInput = ''
+        this.form.password = data.secret || this.form.password
+        this.resetTotpValidation()
+      } finally {
+        this.submitting = false
+      }
+    },
+    async validateTotpConfig() {
+      if (!this.form.password || !this.totpValidationCode) return
+      this.submitting = true
+      try {
+        const { algorithm, digits, period } = this.form.category_fields
+        const data = await this.$axios.post('/api/v1/repository/entries/totp/validate/', {
+          secret: this.form.password, algorithm, digits, period, code: this.totpValidationCode
+        })
+        this.totpValidated = !!data.valid
+        this.totpValidationCode = ''
+        if (!this.totpValidated) this.$message.error(this.$t('TOTPValidationFailed'))
+      } finally {
+        this.submitting = false
+      }
     },
     async loadCollections() {
       const data = await this.$axios.get('/api/v1/repository/collections/', { params: { limit: 999 } })
@@ -437,6 +659,9 @@ export default {
         if (!this.form.password) missing.push(this.$t('PrivateKey'))
       } else if (this.form.category === 'SSH_KEY') {
         if (!this.form.password) missing.push(this.$t('PrivateKey'))
+      } else if (this.form.category === 'TOTP_SECRET') {
+        if (!this.form.password) missing.push(this.$t('SecretTOTP'))
+        else if (!this.totpValidated) missing.push(this.$t('ValidateConfiguration'))
       } else if (this.isGrouped) {
         // no secret of its own - members are added afterward on the detail page
       } else if (!this.form.password) {
@@ -455,9 +680,23 @@ export default {
       this.submitting = true
       try {
         const data = await this.$axios.post('/api/v1/repository/entries/', this.form)
+        // section 16-17 - optional, imported after the entry exists (its
+        // own dedicated endpoint/permission, never part of entry create).
+        // A protected credential needs reason+MFA for this (S38 pattern) -
+        // skip here and point to the Detail page's own import dialog,
+        // which asks for both, rather than silently dropping the codes.
+        const codes = this.totpRecoveryCodesText.split('\n').map((s) => s.trim()).filter(Boolean)
+        if (this.form.category === 'TOTP_SECRET' && codes.length) {
+          if (this.isProtected) {
+            this.$message.warning(this.$t('RecoveryCodesImportAfterCreate'))
+          } else {
+            await this.$axios.post(`/api/v1/repository/entries/${data.id}/recovery-codes/`, { codes })
+          }
+        }
         this.$message.success(this.$t('SavedSuccessfully'))
-        // grouped records land on Detail so members can be added right away
-        this.$router.push(this.isGrouped
+        // grouped records / TOTP land on Detail (TOTP: to show the
+        // generated-code view right away; grouped: to add members)
+        this.$router.push(this.isGrouped || this.form.category === 'TOTP_SECRET'
           ? { name: 'RepositoryCredentialDetail', params: { id: data.id } }
           : { name: 'RepositoryCredentials' })
       } finally {
@@ -515,6 +754,22 @@ h4 .el-icon {
 }
 .category-tile-icon {
   font-size: 20px;
+}
+.qr-dropzone {
+  border: 1px dashed var(--el-border-color);
+  border-radius: 6px;
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--el-text-color-secondary);
+}
+.qr-dropzone:hover {
+  border-color: var(--el-color-primary);
+}
+.totp-preview {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 .advanced-collapse {
   margin: 8px 0 4px;

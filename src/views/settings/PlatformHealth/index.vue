@@ -137,6 +137,25 @@
         </el-col>
       </el-row>
 
+      <!-- Sprint_38-Cofre-Senhas-Melhoria.md section 93/DoD31 -->
+      <el-row :gutter="16" class="ph-row">
+        <el-col :span="6">
+          <IBox title="CredentialRepository">
+            <el-tag :type="statusTagType(repository.status)" size="small">{{
+              repository.status || 'unknown'
+            }}</el-tag>
+            <el-descriptions :column="1" size="small" class="ph-desc">
+              <el-descriptions-item label="PendingRequests">{{ repository.pending_requests ?? '-' }}</el-descriptions-item>
+              <el-descriptions-item label="OldestPending">{{ formatDuration(repository.oldest_pending_seconds) }}</el-descriptions-item>
+              <el-descriptions-item label="ExpiredLast24h">{{ repository.expired_last_24h ?? '-' }}</el-descriptions-item>
+              <el-descriptions-item label="RevealFailures">{{ repository.reveal_failures ?? '-' }}</el-descriptions-item>
+              <el-descriptions-item label="CollectionsUnhealthy">{{ repository.collections_unhealthy ?? '-' }}</el-descriptions-item>
+              <el-descriptions-item label="SecretsOver90Days">{{ repository.secrets_over_90_days ?? '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </IBox>
+        </el-col>
+      </el-row>
+
       <IBox title="Containers" class="ph-row">
         <el-table :data="containers.containers || []" size="small">
           <el-table-column prop="service" label="Service" width="160" />
@@ -258,6 +277,7 @@ export default {
       backup: {},
       alerts: {},
       users: {},
+      repository: {},
       timer: null,
       clock: null,
       backups: [],
@@ -306,7 +326,7 @@ export default {
       this.loading = true
       const base = '/api/v1/ops/platform-health/'
       try {
-        const [summary, host, postgres, containers, workers, backup, alerts, users] = await Promise.all([
+        const [summary, host, postgres, containers, workers, backup, alerts, users, repository] = await Promise.all([
           this.$axios.get(`${base}summary/`),
           this.$axios.get(`${base}host/`),
           this.$axios.get(`${base}postgres/`),
@@ -314,7 +334,8 @@ export default {
           this.$axios.get(`${base}workers/`),
           this.$axios.get(`${base}backup/`),
           this.$axios.get(`${base}alerts/`),
-          this.$axios.get(`${base}users/`)
+          this.$axios.get(`${base}users/`),
+          this.$axios.get(`${base}repository/`)
         ])
         // $axios's response interceptor already unwraps response.data
         // (src/utils/request.js: `return res` where `res = response.data`)
@@ -328,6 +349,7 @@ export default {
         this.backup = backup
         this.alerts = alerts
         this.users = users
+        this.repository = repository
         this.lastUpdated = Date.now()
         this.now = this.lastUpdated
       } finally {

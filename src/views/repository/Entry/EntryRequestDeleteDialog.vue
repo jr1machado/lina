@@ -1,6 +1,10 @@
 <template>
   <el-dialog :model-value="modelValue" :title="$t('RequestDeletion')" width="480px" @update:model-value="close">
     <el-alert type="warning" :closable="false" show-icon :title="$t('RequestDeletionTier0Notice')" class="warning" />
+    <el-alert
+      v-if="entry && entry.category === 'TOTP_SECRET'" type="warning" :closable="false" show-icon
+      :title="$t('DeleteTOTPWarning')" class="warning"
+    />
     <el-form label-position="top">
       <el-form-item :label="$t('Reason')" required>
         <el-input v-model="form.reason" type="textarea" :rows="2" />

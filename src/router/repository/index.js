@@ -104,6 +104,29 @@ export default {
       }
     },
     {
+      // Sprint_39-B-TOTP-Seed-Export.md section 47/81 - dual-control seed
+      // export approval queue, same module-level placement as Requests above.
+      path: '/credential-repository/seed-exports',
+      name: 'RepositorySeedExports',
+      component: () => import('@/views/repository/SeedExport/SeedExportList.vue'),
+      meta: {
+        title: i18n.t('TOTPSeedExport'),
+        icon: 'ticket',
+        permissions: ['repository.view_totpseedexportrequest']
+      }
+    },
+    {
+      path: '/credential-repository/seed-exports/:id',
+      name: 'RepositorySeedExportDetail',
+      component: () => import('@/views/repository/SeedExport/SeedExportDetail.vue'),
+      hidden: true,
+      meta: {
+        title: i18n.t('TOTPSeedExport'),
+        activeMenu: '/credential-repository/seed-exports',
+        permissions: ['repository.view_totpseedexportrequest']
+      }
+    },
+    {
       // 2026-09-04 - the module's "Relatorios" sidebar entry sends the
       // user straight into the platform's real Reports Center library
       // (console/reports-center/library), scoped to the 4 new

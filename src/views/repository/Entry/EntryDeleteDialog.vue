@@ -1,6 +1,13 @@
 <template>
   <el-dialog :model-value="modelValue" :title="$t('DeleteCredential')" width="480px" @update:model-value="close">
     <el-alert type="error" :closable="false" show-icon :title="$t('DeleteCredentialWarning')" class="warning" />
+    <!-- Sprint_39-TOTP-Seed.md sections 59-60 - Hash Access does not
+         control the remote application's own MFA configuration; removing
+         the TOTP here never disables MFA on FortiGate/VMware/etc. -->
+    <el-alert
+      v-if="entry && entry.category === 'TOTP_SECRET'" type="warning" :closable="false" show-icon
+      :title="$t('DeleteTOTPWarning')" class="warning"
+    />
     <el-form label-position="top">
       <el-form-item :label="$t('TypeCredentialNameToConfirm', { name: entry ? entry.name : '' })">
         <el-input v-model="confirmName" />
